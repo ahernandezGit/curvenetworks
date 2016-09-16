@@ -1,0 +1,32 @@
+function backFunction(){
+    var nc=ListCurves2D.number;
+    var ns=ListCurvesShadow.number;
+    console.log("back initial");
+    console.log("curves ", nc, " shadow ",nc);
+    if(ns>0 || nc>0){
+        if(nc>ns){
+        console.log("mais curve");
+        var stroke=setup.scene.getObjectByName("CurrentCurve");
+        //console.log(stroke);
+        setup.scene.remove(stroke);
+        dispose3(stroke);
+        ListCurves2D.popCurve();
+        }
+        else{
+            console.log("mais shadow");
+            //var stroke=setup.scene.getObjectByName("CurrentCurveShadow");
+            var name="reconstructedCurve"+(ns-1).toString();
+            console.log(name);
+            var reconstructed=setup.scene.getObjectByName(name);
+            //setup.scene.remove(stroke);
+            if(reconstructed!= undefined) setup.scene.remove(reconstructed);
+            //dispose3(stroke);
+            dispose3(reconstructed);
+            ListCurvesShadow.popCurve();
+            ListCurves2D.listObjects[nc-1].draw("curve2d");
+        }
+        console.log("back after");
+        console.log("curves ", ListCurves2D.number, " shadow ",ListCurvesShadow.number);    
+    }
+}
+d3.select("#backButton").on("click",backFunction);
