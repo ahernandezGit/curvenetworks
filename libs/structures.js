@@ -40,6 +40,14 @@ ModeManage={
             
         }
     },
+    deformCurve:{
+        value:false,
+        isdeforming:false,
+        raycaster:new THREE.Raycaster(),
+        intersected:false,
+        pointgeometry : new THREE.Geometry(),
+        pointmaterial : new THREE.PointsMaterial( {color: 0x27B327, size: 10.0, sizeAttenuation: false, alphaTest: 0.5 } )
+    },
     focus:function(n) {
         switch(n){
             case 0:{
@@ -47,6 +55,7 @@ ModeManage={
                this.drawShadow.value=false;
                this.drawGuidesLine.value=false;    
                this.selectObject.value=false;    
+               this.deformCurve.value=false;            
                break;    
             }
             case 1:{
@@ -54,6 +63,7 @@ ModeManage={
                this.drawShadow.value=true;
                this.drawGuidesLine.value=false;    
                this.selectObject.value=false;    
+               this.deformCurve.value=false;            
                break;
             }
             case 2:{
@@ -61,23 +71,35 @@ ModeManage={
                this.drawShadow.value=false;
                this.drawGuidesLine.value=true;    
                this.selectObject.value=false;    
+               this.deformCurve.value=false;                
                break;
             }
             case 3:{
                this.drawCurve.value=false;
                this.drawShadow.value=false;
                this.drawGuidesLine.value=false;    
-               this.selectObject.value=true;    
+               this.selectObject.value=true;
+               this.deformCurve.value=false;                
                break;    
             }
+            case 4:{
+               this.drawCurve.value=false;
+               this.drawShadow.value=false;
+               this.drawGuidesLine.value=false;    
+               this.selectObject.value=false;
+               this.deformCurve.value=true;                    
+               break;    
+            }    
             default: {
                this.drawCurve.value=false;
                this.drawShadow.value=false;
                this.drawGuidesLine.value=false;    
                this.selectObject.value=false;     
+               this.deformCurve.value=false;                
             }    
         }
     }
+    
 }
 ListCurves2D={
     number:0,

@@ -97,3 +97,28 @@ function searchIntersectedObject(name){
     }
     return false;
 }
+//convert a geometry.vertices of a curve type LineSegments to a geometry.vertices like in THREE.Line  
+//note that LineSegments repeat point
+function LineSegmentToLineGeometry(geovert){
+    var n=geovert.length;
+    var result=[];
+    var m=n/2;
+    // n is always even , then thre are odd number of points (m+1)
+    for(var i=0;i<m;i++){
+        result.push(geovert[2*i]);
+    }
+    result.push(geovert[n-1]);    
+    return result;
+}
+function removeGuides(){
+    var guides=setup.scene.getObjectByName("GuideLines"); 
+    if(guides!= undefined ) {
+        dispose3(guides);
+        setup.scene.remove(guides);
+    }
+    var particlesC=setup.scene.getObjectByName("intersectPoints"); 
+    if(particlesC!=undefined){
+        setup.scene.remove( particlesC );
+        dispose3(particlesC);
+    }
+}

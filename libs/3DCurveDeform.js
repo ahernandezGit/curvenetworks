@@ -1,7 +1,7 @@
 // 3D curve deformation like Laplacian mesh editting Olga Sorkine ...
 
 
-function deformed3(array,handle,curveVertex,curveObject){
+function deformed3(array,handle,curveVertex,curveObject,normal){
     this.indexvertices=array;
     this.handle=handle;
     this.tableHash=[];
@@ -16,6 +16,7 @@ function deformed3(array,handle,curveVertex,curveObject){
     //this.lastarray=[];
     this.curveVertex=curveVertex;
     this.curveObject=curveObject;
+    this.normal=normal;
     if(this.n>0) this.initialize();
 }
 deformed3.prototype.initialize=function (){
@@ -78,7 +79,8 @@ deformed3.prototype.updateHandle=function(pos){
     vector.unproject( setup.camera);
     var cameraposition=setup.camera.position.clone();
     var dir = vector.sub(cameraposition).normalize();
-    var t=plane.point.clone().sub(cameraposition).dot(plane.normal)/dir.dot(plane.normal);
+    var point=this.positions[this.tableHash[this.handle.toString()]].clone();
+    var t=point.sub(cameraposition).dot(this.normal)/dir.dot(this.normal);
     var point=cameraposition.add(dir.multiplyScalar(t));
     this.positions[this.tableHash[this.handle.toString()]].set(point.x,point.y,point.z);
     //this.curveVertex[this.tableHash[this.handle.toString()]].set(point.x,point.y,point.z);

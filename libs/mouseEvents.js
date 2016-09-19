@@ -72,6 +72,10 @@ function onMouseDown(){
             dispose3(shadowOfCurve);
         }
     }
+    if(ModeManage.deformCurve.value){
+        var short=ModeManage.deformCurve;
+        //short.isdeforming=true;
+    }
 }
 
 function onMouseMove() {
@@ -121,8 +125,32 @@ function onMouseMove() {
         ModeManage.selectObject.raycaster.setFromCamera(mouse,setup.camera);	
         ModeManage.selectObject.raycaster.linePrecision=0.1;    
         
-    }
+    } 
+    if(ModeManage.deformCurve.value){
+        var short=ModeManage.deformCurve;
+        var mouse=mouseNDCXY(event);
+        short.raycaster.setFromCamera(mouse,setup.camera);	
+        short.raycaster.linePrecision=0.1;    
+        //console.log(short.raycaster);
+        var intersects = short.raycaster.intersectObjects(setup.scene.children);
+        //console.log(intersects);
+        if(intersects.length>0){
+            var intersected=intersects[0];
+            //console.log(intersected);
+            if(intersected.object.type=="LineSegments"){
+               //if(!short.isdeforming){
+                    short.intersected=true;
+                    short.pointgeometry.vertices[0].copy(intersected.object.geometry.vertices[intersected.index]);
+                    var particlesC=setup.scene.getObjectByName("intersectPoints"); 
+                    if(particlesC!=undefined) particlesC.geometry.verticesNeedUpdate=true;
+                    
+               //}   
+            }
+            else short.intersected=false;
+        }
 
+        //short.isdeforming=true;
+    }
 }
 function onMouseUp() {
     var event=d3.event;
@@ -187,6 +215,12 @@ function onMouseUp() {
         }
         short.pointsStroke2D=[];
     }
+    if(ModeManage.deformCurve.value){
+        var short=ModeManage.deformCurve;
+        if(!short.isdeforming) return;
+        short.isdeforming=false;
+        
+    }
 }
 
 function onKeyDown(){
@@ -194,23 +228,13 @@ function onKeyDown(){
     //letter d
     if(event.keyCode == 68){
         ModeManage.focus(0);
-        console.log(ModeManage.drawCurve.value);
         setup.controls.enabled=false;
-        var guides=setup.scene.getObjectByName("GuideLines"); 
-        if(guides!= undefined ) {
-            dispose3(guides);
-            setup.scene.remove(guides);
-        }
-        
+        removeGuides();
     }
     //letter esc
     if(event.keyCode == 27){
         ModeManage.focus();
-        var guides=setup.scene.getObjectByName("GuideLines"); 
-        if(guides!= undefined ) {
-            setup.scene.remove(guides);
-            dispose3(guides);
-        }
+        removeGuides();
         setup.controls.enabled=true;
     }
     //letter s
@@ -234,11 +258,7 @@ function onKeyDown(){
     if(event.keyCode == 80){
         ModeManage.focus(3);
         setup.controls.enabled=false; 
-        var guides=setup.scene.getObjectByName("GuideLines"); 
-        if(guides!= undefined ) {
-            dispose3(guides);
-            setup.scene.remove(guides);
-        }
+        removeGuides();
     }
 }
 

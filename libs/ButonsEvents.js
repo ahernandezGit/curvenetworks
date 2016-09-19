@@ -29,4 +29,13 @@ function backFunction(){
         console.log("curves ", ListCurves2D.number, " shadow ",ListCurvesShadow.number);    
     }
 }
+function deformFunction(){
+     ModeManage.focus(4);
+     setup.controls.enabled=false;
+     ModeManage.deformCurve.pointgeometry.vertices=[new THREE.Vector3()];
+     var particlesC = new THREE.Points( ModeManage.deformCurve.pointgeometry, ModeManage.deformCurve.pointmaterial );
+     particlesC.name="intersectPoints";
+     setup.scene.add( particlesC );
+}
 d3.select("#backButton").on("click",backFunction);
+d3.select("#deformButton").on("click",deformFunction);
