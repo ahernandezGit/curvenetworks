@@ -35,6 +35,7 @@ ReferencePlaneGeometry.faces.push( new THREE.Face3(0, 2, 3));
 
 var InitialPlane = new THREE.Mesh(PlaneGeometryH, materialPlane);
 var ReferencePlane = new THREE.Mesh(ReferencePlaneGeometry, materialReferencePlane);
+ReferencePlane.name="ReferencePlane";
 
 //ReferencePlane.position.set(0,3.7,0);
 //ReferencePlane.rotateX(-Math.PI/4);

@@ -25,6 +25,58 @@ ModeManage={
         value: false,  
         geometry : new THREE.Geometry(),
         material : new THREE.LineDashedMaterial( { color: 0xff0000, linewidth: 1, dashSize:0.5, gapSize:0.5} )  
+    },
+    selectObject : {
+        value: false,
+        raycaster:new THREE.Raycaster(),
+        listObjects:[],
+        addObject: function (obj){
+            
+        },
+        deleteObject: function (name){
+            
+        },
+        freeAll: function (){
+            
+        }
+    },
+    focus:function(n) {
+        switch(n){
+            case 0:{
+               this.drawCurve.value=true;
+               this.drawShadow.value=false;
+               this.drawGuidesLine.value=false;    
+               this.selectObject.value=false;    
+               break;    
+            }
+            case 1:{
+               this.drawCurve.value=false;
+               this.drawShadow.value=true;
+               this.drawGuidesLine.value=false;    
+               this.selectObject.value=false;    
+               break;
+            }
+            case 2:{
+               this.drawCurve.value=false;
+               this.drawShadow.value=false;
+               this.drawGuidesLine.value=true;    
+               this.selectObject.value=false;    
+               break;
+            }
+            case 3:{
+               this.drawCurve.value=false;
+               this.drawShadow.value=false;
+               this.drawGuidesLine.value=false;    
+               this.selectObject.value=true;    
+               break;    
+            }
+            default: {
+               this.drawCurve.value=false;
+               this.drawShadow.value=false;
+               this.drawGuidesLine.value=false;    
+               this.selectObject.value=false;     
+            }    
+        }
     }
 }
 ListCurves2D={
@@ -77,8 +129,8 @@ ListCurves3D={
         return this.number-1;
     }
 }
-
-function IntersectionObject(type){
+ListIntersectionObjects={};
+function IntersectionObject(name,type){
     this.name=name;
     this.type=type;
 }

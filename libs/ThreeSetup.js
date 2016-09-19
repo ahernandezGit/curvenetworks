@@ -8,6 +8,7 @@ var ThreeSetup = function() {
 	this.initControls();
 	this.initRenderer();
 	this.initCamera();
+    this.raycaster=new THREE.Raycaster();
 }
 
 ThreeSetup.prototype.initControls = function() {

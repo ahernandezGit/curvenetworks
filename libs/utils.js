@@ -89,3 +89,11 @@ function laplacianSmooth(curve){
         curve[i].add(displacement);
     }
 }
+function searchIntersectedObject(name){
+    for(key in ListIntersectionObjects){
+        if(key==name){
+            return true;
+        }
+    }
+    return false;
+}

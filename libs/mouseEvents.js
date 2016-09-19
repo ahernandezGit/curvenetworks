@@ -1,3 +1,48 @@
+function onMouseClick(){
+    if(ModeManage.selectObject.value){
+        console.log("select mode");
+        var intersects = ModeManage.selectObject.raycaster.intersectObjects(setup.scene.children);
+        //console.log(intersects);
+        if(intersects.length>0){
+            var intersected=intersects[0];
+            console.log(intersected);
+            if(intersected.object.type=="Mesh" && intersected.object.name=="ReferencePlane"){
+                if(searchIntersectedObject("ReferencePlane")){
+                    intersected.object.material.transparent=true;
+                    intersected.object.material.opacity=0.5;    
+                    delete ListIntersectionObjects["ReferencePlane"];
+                }
+                else{
+                    intersected.object.material.transparent=false;
+                    intersected.object.material.opacity=1;    
+                    ListIntersectionObjects["ReferencePlane"]=new IntersectionObject("ReferencePlane","Mesh");   
+                }
+            }
+            else if(intersected.object.type=="LineSegments"){
+                var name=intersected.object.name;
+                if(searchIntersectedObject(name)){
+                    intersected.object.material.linewidth=3;
+                    intersected.object.material.opacity=1;    
+                    delete ListIntersectionObjects[name];
+                }
+                else{
+                    intersected.object.material.linewidth=6;
+                    intersected.object.material.opacity=0.5;    
+                    ListIntersectionObjects[name]=new IntersectionObject(name,"LineSegments");   
+                }
+            }
+            //intersected.object.material.color.set(0xDF7401);
+            /*intersected.object.material.color.set(0xDF7401);
+            //intersected.material.color.setHex( INTERSECTED.currentHex );
+            intersected.object.material.transparent = false;
+            intersected.object.material.depthWrite  = true;
+            intersected.object.material.depthTest = true;*/
+        }
+    }
+    else{
+        console.log("no select mode");
+    }
+}
 function onMouseDown(){
     var event=d3.event;
     if(ModeManage.drawCurve.value){
@@ -28,6 +73,7 @@ function onMouseDown(){
         }
     }
 }
+
 function onMouseMove() {
     var event=d3.event;
     if(ModeManage.drawCurve.value){
@@ -70,6 +116,12 @@ function onMouseMove() {
         }
     }
     else ModeManage.drawGuidesLine.value=false;
+    if(ModeManage.selectObject.value){
+        var mouse=mouseNDCXY(event);
+        ModeManage.selectObject.raycaster.setFromCamera(mouse,setup.camera);	
+        ModeManage.selectObject.raycaster.linePrecision=0.1;    
+        
+    }
 
 }
 function onMouseUp() {
@@ -139,10 +191,10 @@ function onMouseUp() {
 
 function onKeyDown(){
     var event=d3.event;
+    //letter d
     if(event.keyCode == 68){
-        ModeManage.drawCurve.value=true;
-        ModeManage.drawShadow.value=false;
-        ModeManage.drawGuidesLine.value=false;
+        ModeManage.focus(0);
+        console.log(ModeManage.drawCurve.value);
         setup.controls.enabled=false;
         var guides=setup.scene.getObjectByName("GuideLines"); 
         if(guides!= undefined ) {
@@ -151,10 +203,9 @@ function onKeyDown(){
         }
         
     }
+    //letter esc
     if(event.keyCode == 27){
-        ModeManage.drawCurve.value=false;
-        ModeManage.drawShadow.value=false;
-        ModeManage.drawGuidesLine.value=false;
+        ModeManage.focus();
         var guides=setup.scene.getObjectByName("GuideLines"); 
         if(guides!= undefined ) {
             setup.scene.remove(guides);
@@ -162,9 +213,9 @@ function onKeyDown(){
         }
         setup.controls.enabled=true;
     }
+    //letter s
     if(event.keyCode == 83){
-        ModeManage.drawShadow.value=true;
-        ModeManage.drawCurve.value=false;
+        ModeManage.focus(1);
         setup.controls.enabled=false;
         ModeManage.drawGuidesLine.geometry.vertices=[];
         ModeManage.drawGuidesLine.geometry.vertices.push(new THREE.Vector3(0,0,0),new THREE.Vector3(0,0,0));
@@ -174,8 +225,20 @@ function onKeyDown(){
         cross.name="GuideLines";
         setup.scene.add(cross);
     }
+    //ctrl+z
+    //letter z is 90
     if(event.keyCode == 90 && event.ctrlKey){
         backFunction();
+    }
+    //letter p
+    if(event.keyCode == 80){
+        ModeManage.focus(3);
+        setup.controls.enabled=false; 
+        var guides=setup.scene.getObjectByName("GuideLines"); 
+        if(guides!= undefined ) {
+            dispose3(guides);
+            setup.scene.remove(guides);
+        }
     }
 }
 
