@@ -45,8 +45,22 @@ ModeManage={
         isdeforming:false,
         raycaster:new THREE.Raycaster(),
         intersected:false,
+        vertices:[],
+        curvename:"",
+        handle:-1,
+        path:{},
         pointgeometry : new THREE.Geometry(),
         pointmaterial : new THREE.PointsMaterial( {color: 0x27B327, size: 10.0, sizeAttenuation: false, alphaTest: 0.5 } )
+    },
+    joinCurves:{
+        value:false,
+        isdrawing:false, 
+        lastPoint: new THREE.Vector3(),
+        currentPoint: new THREE.Vector3(),
+        LineStroke : new THREE.Object3D(),
+        pointsStroke : [],
+        pointsStroke2D : [],
+        materialCurve : new THREE.LineBasicMaterial( { color: 0xFF0040, linewidth: 2 } )
     },
     focus:function(n) {
         switch(n){
@@ -55,7 +69,8 @@ ModeManage={
                this.drawShadow.value=false;
                this.drawGuidesLine.value=false;    
                this.selectObject.value=false;    
-               this.deformCurve.value=false;            
+               this.deformCurve.value=false;  
+               this.joinCurves.value=false;      
                break;    
             }
             case 1:{
@@ -63,7 +78,8 @@ ModeManage={
                this.drawShadow.value=true;
                this.drawGuidesLine.value=false;    
                this.selectObject.value=false;    
-               this.deformCurve.value=false;            
+               this.deformCurve.value=false;     
+               this.joinCurves.value=false;      
                break;
             }
             case 2:{
@@ -71,7 +87,8 @@ ModeManage={
                this.drawShadow.value=false;
                this.drawGuidesLine.value=true;    
                this.selectObject.value=false;    
-               this.deformCurve.value=false;                
+               this.deformCurve.value=false;
+               this.joinCurves.value=false;      
                break;
             }
             case 3:{
@@ -79,7 +96,8 @@ ModeManage={
                this.drawShadow.value=false;
                this.drawGuidesLine.value=false;    
                this.selectObject.value=true;
-               this.deformCurve.value=false;                
+               this.deformCurve.value=false;            
+               this.joinCurves.value=false;          
                break;    
             }
             case 4:{
@@ -87,7 +105,17 @@ ModeManage={
                this.drawShadow.value=false;
                this.drawGuidesLine.value=false;    
                this.selectObject.value=false;
-               this.deformCurve.value=true;                    
+               this.deformCurve.value=true;
+               this.joinCurves.value=false;      
+               break;    
+            } 
+            case 5:{
+               this.drawCurve.value=false;
+               this.drawShadow.value=false;
+               this.drawGuidesLine.value=false;    
+               this.selectObject.value=false;
+               this.deformCurve.value=false;
+               this.joinCurves.value=true;      
                break;    
             }    
             default: {
@@ -96,6 +124,7 @@ ModeManage={
                this.drawGuidesLine.value=false;    
                this.selectObject.value=false;     
                this.deformCurve.value=false;                
+               this.joinCurves.value=false;      
             }    
         }
     }

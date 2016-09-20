@@ -39,9 +39,6 @@ function onMouseClick(){
             intersected.object.material.depthTest = true;*/
         }
     }
-    else{
-        console.log("no select mode");
-    }
 }
 function onMouseDown(){
     var event=d3.event;
@@ -74,7 +71,29 @@ function onMouseDown(){
     }
     if(ModeManage.deformCurve.value){
         var short=ModeManage.deformCurve;
-        //short.isdeforming=true;
+        if(short.intersected){
+            short.isdeforming=true;
+            // convert THREE.LineSegment geometry to THREE.Line for work 
+            var curveVertices=LineSegmentToLineGeometry(short.vertices);
+            var all=[];
+            var extremes=[Math.max(0,short.handle-20),Math.min(curveVertices.length-1,short.handle+20)];
+            //var extremes=[0,curveVertices.length-1];
+            for(var i=extremes[0];i<=extremes[1];i++){
+                all.push(i);
+            }
+            short.path=new deformed3(all,short.handle,curveVertices,setup.camera.getWorldDirection());
+        }
+        
+    }
+    if(ModeManage.joinCurves.value){
+        var short=ModeManage.joinCurves;
+        short.isdrawing = true;
+        short.LineStroke = new THREE.Object3D();
+        short.LineStroke.name="CircleCurve";
+        setup.scene.add(short.LineStroke);
+        short.LastPoint=projectToFarPlane(event);
+        short.pointsStroke.push(short.LastPoint);  
+        short.pointsStroke2D.push(mouseOnScreen2D(event));
     }
 }
 
@@ -129,27 +148,49 @@ function onMouseMove() {
     if(ModeManage.deformCurve.value){
         var short=ModeManage.deformCurve;
         var mouse=mouseNDCXY(event);
-        short.raycaster.setFromCamera(mouse,setup.camera);	
-        short.raycaster.linePrecision=0.1;    
-        //console.log(short.raycaster);
-        var intersects = short.raycaster.intersectObjects(setup.scene.children);
-        //console.log(intersects);
-        if(intersects.length>0){
-            var intersected=intersects[0];
-            //console.log(intersected);
-            if(intersected.object.type=="LineSegments"){
-               //if(!short.isdeforming){
-                    short.intersected=true;
-                    short.pointgeometry.vertices[0].copy(intersected.object.geometry.vertices[intersected.index]);
-                    var particlesC=setup.scene.getObjectByName("intersectPoints"); 
-                    if(particlesC!=undefined) particlesC.geometry.verticesNeedUpdate=true;
-                    
-               //}   
+        if(!short.isdeforming){
+            short.raycaster.setFromCamera(mouse,setup.camera);	
+            short.raycaster.linePrecision=0.1;    
+            //console.log(short.raycaster);
+            var intersects = short.raycaster.intersectObjects(setup.scene.children);
+            //console.log(intersects);
+            if(intersects.length>0){
+                var intersected=intersects[0];
+                //console.log(intersected);
+                if(intersected.object.type=="LineSegments"){
+                   short.intersected=true;
+                   short.curvename=intersected.object.name;
+                   short.vertices=intersected.object.geometry.vertices;    
+                   if(!short.isdeforming){
+                        short.pointgeometry.vertices[0].copy(intersected.object.geometry.vertices[intersected.index]);
+                        var particlesC=setup.scene.getObjectByName("intersectPoints"); 
+                        if(particlesC!=undefined) particlesC.geometry.verticesNeedUpdate=true;
+                        if(intersected.index%2==0) short.handle=intersected.index/2;
+                        else short.handle=(intersected.index+1)/2;
+                   } 
+                }
+                else short.intersected=false;
             }
             else short.intersected=false;
         }
-
-        //short.isdeforming=true;
+        else{
+           //console.log(short.path);    
+           short.path.updateHandle(mouse); 
+           var editedcurve=setup.scene.getObjectByName(short.curvename); 
+           if(editedcurve!=undefined) editedcurve.geometry.verticesNeedUpdate=true;          
+        }
+    }
+    if(ModeManage.joinCurves.value){
+        var short=ModeManage.joinCurves;
+        if(!short.isdrawing) return;
+        short.currentPoint=projectToFarPlane(event);
+        short.pointsStroke.push(short.currentPoint);
+        short.pointsStroke2D.push(mouseOnScreen2D(event));  
+        var geometryLine = new THREE.Geometry();
+        geometryLine.vertices.push(short.LastPoint,short.currentPoint);
+        short.LastPoint=short.currentPoint;
+        var line = new THREE.Line( geometryLine, short.materialCurve );
+        short.LineStroke.add(line);
     }
 }
 function onMouseUp() {
@@ -220,6 +261,55 @@ function onMouseUp() {
         if(!short.isdeforming) return;
         short.isdeforming=false;
         
+    }
+    if(ModeManage.joinCurves.value){
+        var short=ModeManage.joinCurves;
+        if(!short.isdrawing) return;
+        short.isdrawing = false;
+        setup.scene.remove(short.LineStroke);
+        dispose3(short.LineStroke);
+        var circle=getCircle(short.pointsStroke2D);
+        //console.log(circle);
+        var center=new THREE.Vector2(circle[0],circle[1]);
+        var r=circle[2];
+        //store list of id curve to join
+        var listid=[];
+        //0 if begin and 1 if final for each curve
+        var listindex=[];
+        for(var i=0;i<ListCurves3D.listObjects.length;i++){
+            /*var start=threeDToScreenSpace(ListCurves3D.listObjects[i].getPoint(0));
+            var end=threeDToScreenSpace(ListCurves3D.listObjects[i].getPoint(1));*/
+            var name="reconstructedCurve"+i.toString();
+            var curve=setup.scene.getObjectByName(name); 
+            var start=threeDToScreenSpace(curve.geometry.vertices[0]);
+            var end=threeDToScreenSpace(curve.geometry.vertices[curve.geometry.vertices.length-1]);
+            if(start.distanceTo(center)<r){
+                listid.push(i);
+                listindex.push(0);
+                continue;
+            }
+            if(end.distanceTo(center)<r){
+                listid.push(i);
+                listindex.push(curve.geometry.vertices.length-1);
+            }
+        }
+        console.log(listid);
+        if(listid.length>0){
+            var media=new THREE.Vector3(0,0,0);
+            for(var i=0;i<listid.length;i++){
+                var name="reconstructedCurve"+listid[i].toString();
+                var curve=setup.scene.getObjectByName(name); 
+                media.add(curve.geometry.vertices[listindex[i]]);
+            }
+            media.divideScalar(listid.length);    
+            for(var i=0;i<listid.length;i++){
+                var name="reconstructedCurve"+listid[i].toString();
+                var curve=setup.scene.getObjectByName(name); 
+                curve.geometry.vertices[listindex[i]].copy(media);
+                curve.geometry.verticesNeedUpdate=true;
+            }
+        }
+        short.pointsStroke2D=[];
     }
 }
 

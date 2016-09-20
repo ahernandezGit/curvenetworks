@@ -37,5 +37,10 @@ function deformFunction(){
      particlesC.name="intersectPoints";
      setup.scene.add( particlesC );
 }
+function joinCurveFunction(){
+     ModeManage.focus(5);
+     setup.controls.enabled=false;
+}
 d3.select("#backButton").on("click",backFunction);
 d3.select("#deformButton").on("click",deformFunction);
+d3.select("#joinButton").on("click",joinCurveFunction);

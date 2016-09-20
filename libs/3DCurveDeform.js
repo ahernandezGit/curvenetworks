@@ -1,7 +1,6 @@
 // 3D curve deformation like Laplacian mesh editting Olga Sorkine ...
 
-
-function deformed3(array,handle,curveVertex,curveObject,normal){
+function deformed3(array,handle,curveVertex,normal){
     this.indexvertices=array;
     this.handle=handle;
     this.tableHash=[];
@@ -15,7 +14,6 @@ function deformed3(array,handle,curveVertex,curveObject,normal){
     this.lowweight=1;
     //this.lastarray=[];
     this.curveVertex=curveVertex;
-    this.curveObject=curveObject;
     this.normal=normal;
     if(this.n>0) this.initialize();
 }
@@ -73,14 +71,14 @@ deformed3.prototype.computeLaplacian=function(){
        this.triplets=[];
    }
 }
-deformed3.prototype.updateHandle=function(pos){
+deformed3.prototype.updateHandle=function(mouse){
     var vector = new THREE.Vector3();
     vector.set( mouse.x ,mouse.y , 0.5 );
     vector.unproject( setup.camera);
     var cameraposition=setup.camera.position.clone();
     var dir = vector.sub(cameraposition).normalize();
-    var point=this.positions[this.tableHash[this.handle.toString()]].clone();
-    var t=point.sub(cameraposition).dot(this.normal)/dir.dot(this.normal);
+    var point2=this.positions[this.tableHash[this.handle.toString()]].clone();
+    var t=point2.sub(cameraposition).dot(this.normal)/dir.dot(this.normal);
     var point=cameraposition.add(dir.multiplyScalar(t));
     this.positions[this.tableHash[this.handle.toString()]].set(point.x,point.y,point.z);
     //this.curveVertex[this.tableHash[this.handle.toString()]].set(point.x,point.y,point.z);
@@ -138,6 +136,7 @@ deformed3.prototype.updateVertices3=function(){
     
     // creating final matrix for fitting
     var constrain=[0,this.n-1];
+    //var constrain=[];
     /*
     for(var i=0;i<this.left;i++){   
        constrain.push(i);
@@ -197,7 +196,7 @@ deformed3.prototype.updateVertices3=function(){
         this.positions[i].setY(vxyz[3*i+1]);
         this.positions[i].setZ(vxyz[3*i+2]);
     }
-    this.curveObject.geometry.verticesNeedUpdate = true;
+    //this.curveObject.geometry.verticesNeedUpdate = true;
     /*var mesh = setup.scene.getObjectByName("mesh"); 
     if(mesh!=undefined) mesh.geometry.verticesNeedUpdate = true;   
     var wireframe=setup.scene.getObjectByName("wireframeMesh");

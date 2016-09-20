@@ -103,13 +103,30 @@ function LineSegmentToLineGeometry(geovert){
     var n=geovert.length;
     var result=[];
     var m=n/2;
-    // n is always even , then thre are odd number of points (m+1)
+    // n is always even 
+    // if m is odd then there is even number of points (m+1)
+    // if m is even then there is odd number of points (m+1)
     for(var i=0;i<m;i++){
         result.push(geovert[2*i]);
     }
     result.push(geovert[n-1]);    
     return result;
 }
+//convert a geometry.vertices of a curve type  THREE.Line to a geometry.vertices like in  THREE.LineSegments  
+//note that LineSegments repeat point
+function LineGeometryToLineSegment(geovert){
+    var n=geovert.length-1;
+    var result=[];
+    var m=2*n;
+    for(var i=0;i<n;i++){
+        result.push(geovert[i]);
+        if(i!=(n-1)){
+            result.push(geovert[i+1]);
+        }
+    }
+    return result;
+}
+
 function removeGuides(){
     var guides=setup.scene.getObjectByName("GuideLines"); 
     if(guides!= undefined ) {
@@ -121,4 +138,24 @@ function removeGuides(){
         setup.scene.remove( particlesC );
         dispose3(particlesC);
     }
+}
+// convert um array os THREE.VEctor3 points to screen space
+function toScreenSpace(array){
+    var n=array.length;
+    var result=[];
+    for(var i=0;i<n;i++){
+        result.push(threeDToScreenSpace(array[i]));
+    }
+    return result;
+}
+function getCircle(array){
+    var n=array.length;
+    for(var i=0;i<n;i++){
+        CIRCLEFIT.addPoint(array[i].x, array[i].y);
+    }
+    var result = CIRCLEFIT.compute();
+    if (result.success) {
+        return [result.center.x,result.center.y,result.radius];    
+    }
+    else return [];
 }
