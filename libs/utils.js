@@ -155,7 +155,57 @@ function getCircle(array){
     }
     var result = CIRCLEFIT.compute();
     if (result.success) {
+        CIRCLEFIT.resetPoints();
         return [result.center.x,result.center.y,result.radius];    
     }
-    else return [];
+    else{
+        CIRCLEFIT.resetPoints();
+        return [];
+    } 
+}
+//
+function mirrorOnPlaneYZ(curveVertices){
+    var material=new THREE.LineBasicMaterial({ color: 0x564002, linewidth: 3});
+    //var geometry=new THREE.Geometry();
+    var geometry=curveVertices.clone();
+    for(var i=0;i<geometry.vertices.length;i++){
+        geometry.vertices[i].setX(-geometry.vertices[i].x);
+    }
+    /*for(var i=0;i<curveVertices.length;i++){
+        var p=curveVertices[i].clone();
+        //var q=curveVertices[i+1].clone();
+        p.setX(-p.x);
+        //q.setX(-q.y);
+        //geometry.vertices.push(p,q);
+        geometry.vertices.push(p);
+    }*/
+    //line.geometry.verticesNeedUpdate = true;
+    var line = new THREE.LineSegments( geometry, material );
+    var id=ListCurves3D.number;
+    ListCurves3D.addCurve(geometry.vertices);
+    ListCurves2D.addCurve([]);
+    ListCurvesShadow.addCurve([]);
+    line.name="reconstructedCurve"+id.toString();
+    setup.scene.add(line);
+    
+}
+function symmetrize(){
+    var n=0;
+    var index=[];
+    for(key in ListIntersectionObjects){
+        if(ListIntersectionObjects[key].type=="LineSegments"){
+            n++;
+            index.push(ListIntersectionObjects[key].name);
+        }
+    }
+    if(n==1){
+        var curve=setup.scene.getObjectByName(index[0]); 
+        mirrorOnPlaneYZ(curve.geometry);
+        curve.material.linewidth=3;
+        curve.material.opacity=1;    
+        delete ListIntersectionObjects[index[0]];
+        ReferencePlane.material.transparent=true;
+        ReferencePlane.material.opacity=0.5;    
+        delete ListIntersectionObjects["ReferencePlane"];
+    }
 }

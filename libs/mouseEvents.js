@@ -15,7 +15,8 @@ function onMouseClick(){
                 else{
                     intersected.object.material.transparent=false;
                     intersected.object.material.opacity=1;    
-                    ListIntersectionObjects["ReferencePlane"]=new IntersectionObject("ReferencePlane","Mesh");   
+                    ListIntersectionObjects["ReferencePlane"]=new IntersectionObject("ReferencePlane","Mesh"); 
+                    symmetrize();
                 }
             }
             else if(intersected.object.type=="LineSegments"){
@@ -31,12 +32,6 @@ function onMouseClick(){
                     ListIntersectionObjects[name]=new IntersectionObject(name,"LineSegments");   
                 }
             }
-            //intersected.object.material.color.set(0xDF7401);
-            /*intersected.object.material.color.set(0xDF7401);
-            //intersected.material.color.setHex( INTERSECTED.currentHex );
-            intersected.object.material.transparent = false;
-            intersected.object.material.depthWrite  = true;
-            intersected.object.material.depthTest = true;*/
         }
     }
 }
@@ -76,7 +71,8 @@ function onMouseDown(){
             // convert THREE.LineSegment geometry to THREE.Line for work 
             var curveVertices=LineSegmentToLineGeometry(short.vertices);
             var all=[];
-            var extremes=[Math.max(0,short.handle-20),Math.min(curveVertices.length-1,short.handle+20)];
+            var eps=Math.round(curveVertices.length/3);
+            var extremes=[Math.max(0,short.handle-eps),Math.min(curveVertices.length-1,short.handle+eps)];
             //var extremes=[0,curveVertices.length-1];
             for(var i=extremes[0];i<=extremes[1];i++){
                 all.push(i);
@@ -269,43 +265,66 @@ function onMouseUp() {
         setup.scene.remove(short.LineStroke);
         dispose3(short.LineStroke);
         var circle=getCircle(short.pointsStroke2D);
-        //console.log(circle);
+        console.log(circle);
         var center=new THREE.Vector2(circle[0],circle[1]);
         var r=circle[2];
         //store list of id curve to join
         var listid=[];
         //0 if begin and 1 if final for each curve
         var listindex=[];
+        var listindexc=[];
+        var listoject=[];
         for(var i=0;i<ListCurves3D.listObjects.length;i++){
             /*var start=threeDToScreenSpace(ListCurves3D.listObjects[i].getPoint(0));
             var end=threeDToScreenSpace(ListCurves3D.listObjects[i].getPoint(1));*/
             var name="reconstructedCurve"+i.toString();
+            console.log(name);
             var curve=setup.scene.getObjectByName(name); 
             var start=threeDToScreenSpace(curve.geometry.vertices[0]);
             var end=threeDToScreenSpace(curve.geometry.vertices[curve.geometry.vertices.length-1]);
             if(start.distanceTo(center)<r){
                 listid.push(i);
                 listindex.push(0);
+                listindexc.push(0);
+                console.log(start.distanceTo(center));
                 continue;
             }
             if(end.distanceTo(center)<r){
                 listid.push(i);
+                console.log(end.distanceTo(center));
                 listindex.push(curve.geometry.vertices.length-1);
+                listindexc.push(curve.geometry.vertices.length/2);
             }
         }
         console.log(listid);
+        //console.log(listindexc);
         if(listid.length>0){
             var media=new THREE.Vector3(0,0,0);
             for(var i=0;i<listid.length;i++){
                 var name="reconstructedCurve"+listid[i].toString();
                 var curve=setup.scene.getObjectByName(name); 
                 media.add(curve.geometry.vertices[listindex[i]]);
+                var curveVertices=LineSegmentToLineGeometry(curve.geometry.vertices);
+                var all=[];
+                //console.log(listindexc[i]);
+                var eps=Math.round(curveVertices.length/2);
+                var extremes=[Math.max(0,listindexc[i]-eps),Math.min(curveVertices.length-1,listindexc[i]+eps)];
+                //var extremes=[0,curveVertices.length-1];
+                for(var j=extremes[0];j<=extremes[1];j++){
+                    all.push(j);
+                }
+                //console.log(extremes);
+                //console.log(listindexc[i]);
+                listoject.push(new deformed3(all,listindexc[i],curveVertices,setup.camera.getWorldDirection()));
             }
-            media.divideScalar(listid.length);    
+            media.divideScalar(listid.length);   
+            
             for(var i=0;i<listid.length;i++){
                 var name="reconstructedCurve"+listid[i].toString();
+                //console.log(name);
                 var curve=setup.scene.getObjectByName(name); 
                 curve.geometry.vertices[listindex[i]].copy(media);
+                listoject[i].updateVertices3();
                 curve.geometry.verticesNeedUpdate=true;
             }
         }

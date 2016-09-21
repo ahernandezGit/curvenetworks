@@ -57,33 +57,36 @@ function getCriticalPoints(curve){
     DirectionalVector2D.sub(origin2D);
     //drawLine(DirectionalVector,new THREE.Vector3(0,0,0));
     var n=curve.length;
-    var result=[0];
-    for(var i=1;i<n-1;i++){
-        var neibord_minmax=getNeibord(i,n);
-        //console.log("neibor");
-        //console.log(neibord_minmax);
-        var otherExtreme=curve[i].clone().add(DirectionalVector2D);
-        //constructing straigh passing by curve[i] and otherextreme
-        var slope=(curve[i].y-otherExtreme.y)/(curve[i].x-otherExtreme.x);
-        var b=(curve[i].x*otherExtreme.y-otherExtreme.x*curve[i].y)/(curve[i].x-otherExtreme.x);
-        //test over each neiborhood
-        var FirstTest=signo(curve[neibord_minmax[0]].y-slope*curve[neibord_minmax[0]].x-b);
-        //console.log("firsttest");
-        //console.log(FirstTest);
-        //console.log("secondstest");
-        for(var j=neibord_minmax[0]+1;j<=neibord_minmax[1];j++){
-            if(j!=i){
-              var test=signo(curve[j].y-slope*curve[j].x-b);
-              //console.log(test);    
-              if(test!=FirstTest)  break; 
-            } 
+    var result=[];
+    if(n>0){
+        result.push(0);
+        for(var i=1;i<n-1;i++){
+            var neibord_minmax=getNeibord(i,n);
+            //console.log("neibor");
+            //console.log(neibord_minmax);
+            var otherExtreme=curve[i].clone().add(DirectionalVector2D);
+            //constructing straigh passing by curve[i] and otherextreme
+            var slope=(curve[i].y-otherExtreme.y)/(curve[i].x-otherExtreme.x);
+            var b=(curve[i].x*otherExtreme.y-otherExtreme.x*curve[i].y)/(curve[i].x-otherExtreme.x);
+            //test over each neiborhood
+            var FirstTest=signo(curve[neibord_minmax[0]].y-slope*curve[neibord_minmax[0]].x-b);
+            //console.log("firsttest");
+            //console.log(FirstTest);
+            //console.log("secondstest");
+            for(var j=neibord_minmax[0]+1;j<=neibord_minmax[1];j++){
+                if(j!=i){
+                  var test=signo(curve[j].y-slope*curve[j].x-b);
+                  //console.log(test);    
+                  if(test!=FirstTest)  break; 
+                } 
+            }
+            if(test==FirstTest){
+                result.push(i);
+            }
+
         }
-        if(test==FirstTest){
-            result.push(i);
-        }
-        
+        result.push(n-1);
     }
-    result.push(n-1);
     //console.log(result);  
     return result;
 }
@@ -201,7 +204,8 @@ function matchCriticalPoints(id,ListCurve,ListShadow){
         var valid=true;
         var i=1;
         var j0=1;
-        while(valid && i<is.length){
+        var t=0; // for prevent infinity loop
+        while(valid && i<is.length && t<500){
             console.log("valid ",valid);
             console.log("i",i);
             console.log("j0",j0);
@@ -218,6 +222,7 @@ function matchCriticalPoints(id,ListCurve,ListShadow){
                 }
                 else valid=false;
             }
+            t++;
         }
         if(couple[couple.length-1][1]!=ic.length-1){
             console.log("finish no match");

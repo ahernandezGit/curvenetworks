@@ -60,6 +60,7 @@ ModeManage={
         LineStroke : new THREE.Object3D(),
         pointsStroke : [],
         pointsStroke2D : [],
+        path:{},
         materialCurve : new THREE.LineBasicMaterial( { color: 0xFF0040, linewidth: 2 } )
     },
     focus:function(n) {
@@ -174,10 +175,15 @@ ListCurves3D={
     number:0,
     listObjects:[],
     addCurve: function (points3D){
-        var obj=new THREE.CatmullRomCurve3(points3D);
+        var obj={};
+        if(points3D.length>0) obj=new THREE.CatmullRomCurve3(points3D);
         this.listObjects.push(obj);
         this.number++;
         return this.number-1;
+    },
+    popCurve: function(){
+        this.listObjects.pop();
+        this.number--;
     }
 }
 ListIntersectionObjects={};
