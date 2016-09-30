@@ -173,21 +173,55 @@ ListCurvesShadow={
 }
 ListCurves3D={
     number:0,
-    listObjects:[],
-    addCurve: function (points3D){
-        var obj={};
-        if(points3D.length>0) obj=new THREE.CatmullRomCurve3(points3D);
-        this.listObjects.push(obj);
+    list:{},
+    addCurve: function(points3D,symmetric,id){
+        if(id!=undefined) var name="Curve"+id.toString();
+        else var name="Curve"+this.number.toString();
+        symmetric= symmetric || "";
+        if(symmetric!="")  this.list[name]=new curve3D(name,points3D,"smooth",symmetric);
+        else this.list[name]=new curve3D(name,points3D,"smooth","");
         this.number++;
         return this.number-1;
     },
     popCurve: function(){
-        this.listObjects.pop();
+        var id=this.number-1;
+        var name="Curve"+id.toString();
+        delete this.list[name];
+        this.number--;
+    },
+    removeCurve: function (name){
+        delete this.list[name];
         this.number--;
     }
 }
+
+
 ListIntersectionObjects={};
 function IntersectionObject(name,type){
     this.name=name;
     this.type=type;
+}
+
+//defining a abstract curve
+
+function curve3D(name,points3D,type,symmetric){
+    this.name=name;
+    //this.controlpoints=points3D;
+    this.catmullrom3={};
+    this.tube={};
+    this.type=type;
+    this.iscurve=false;
+    this.symmetric=symmetric;
+    this.compute(points3D);
+}
+curve3D.prototype.compute=function(points3D){
+    if(points3D.length>0){
+        this.iscurve=true;
+        this.catmullrom3=new THREE.CatmullRomCurve3(points3D);  
+        this.tube=new THREE.TubeGeometry(this.catmullrom3, 100, 0.1, 8, false);
+        this.controlpoints=this.tube.parameters.path.points;
+    }
+    else{
+        this.controlpoints=[];
+    }
 }

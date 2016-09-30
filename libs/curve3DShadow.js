@@ -1,4 +1,8 @@
 var DirectionalVector=new THREE.Vector3(0,0,-1);
+setup.scene.add( lighth );
+setup.scene.add( light );
+setup.scene.add( directionalLightUpper);
+setup.scene.add( directionalLightDown);
 
 //Orientation operator for three 2d points
  //sig( |	1  1  1 |
@@ -240,10 +244,6 @@ function matchCriticalPoints(id,ListCurve,ListShadow){
     return match;
 }
 function reconstruct3DCurve(id,ListCurve,ListShadow){
-    //version like problem of least square
-    //minimize error from projection in screen space and projection on plane XY
-    //var pxyz=zeros(6*n,3*n);
-    
     //likely original method of the paper
     var m=101;
     var dirplane=new THREE.Vector3(0,0,1);
@@ -251,9 +251,12 @@ function reconstruct3DCurve(id,ListCurve,ListShadow){
     var vy=zeros(m);
     var vz=zeros(m);
     var p3=setup.camera.position.clone();
+    var stroke2D=[];
+    var shadow3D=[];
     for(var j=0;j<m;j++){
         var p=ListCurve.listObjects[id].interpolateForT(j/(m-1));
         var q=ListShadow.listObjects[id].interpolateForT(j/(m-1));
+        stroke2D.push({x:p.x,y:p.y});
         //get line in world space passing by p  
         var pv=new THREE.Vector2();
         pv.x = ( p.x / window.innerWidth ) * 2 - 1;
@@ -267,6 +270,7 @@ function reconstruct3DCurve(id,ListCurve,ListShadow){
         dir.copy(vector);
         
         var q3=Position3D({x:q.x,y:q.y});
+        shadow3D.push(q3.clone());
         // solve system in lest square sense
         var A=zeros(3,2);
         var b=zeros(3);
@@ -294,8 +298,39 @@ function reconstruct3DCurve(id,ListCurve,ListShadow){
     for(var i=0;i<vx.length;i++){
         vxyz.push(new THREE.Vector3(vx[i],vy[i],vz[i]));
     }
-    //vxyz.push(new THREE.Vector3(vx[vx.length-1],vy[vx.length-1],vz[vx.length-1]));
+   
     
+    //version like problem of least square
+    //minimize error from projection in screen space and projection on plane XY
+    //compute approx center of mass
+    /*var cmass=new THREE.Vector3(0,0,0);
+    for(var i=0;i<vxyz.length;i++){
+        cmass.add(vxyz[i]);
+    }
+    cmass.divideScalar(vxyz.length); 
+    var f=setup.camera.getFocalLength();
+    f=f/cmass.z;
+    var u=-cmass.x/cmass.z;
+    var v=-cmass.y/cmass.z;
+    for(var j=0;j<m;j++){
+        var A=zeros(4,3);
+        var b=zeros(4,1);
+        A.val[0]=f;
+        A.val[2]=f*u;
+        A.val[4]=f;
+        A.val[5]=f*v;
+        A.val[0]=f;
+        A.val[6]=1;
+        A.val[10]=1;
+        b[0]=stroke2D[j].x-f*cmass.x;
+        b[1]=stroke2D[j].y-f*cmass.y;
+        b[2]=shadow3D[j].x;
+        b[3]=shadow3D[j].y;
+        var sol=cgnr(A,b);
+        vxyz[j].set(sol[0],sol[1],sol[2]);
+    }
+    */
+     
     for(var i=0;i<9;i++){
         laplacianSmooth(vxyz);    
     }
@@ -304,9 +339,6 @@ function reconstruct3DCurve(id,ListCurve,ListShadow){
         var q=vxyz[i+1];
         geometry.vertices.push(p,q);
     }
-    //line.geometry.verticesNeedUpdate = true;
-    var line = new THREE.LineSegments( geometry, material );
-    line.name="reconstructedCurve"+id.toString();
-    setup.scene.add(line);
-    return vxyz;
+    
+    return [geometry,vxyz];
 }

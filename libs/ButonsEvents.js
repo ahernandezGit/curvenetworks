@@ -24,15 +24,7 @@ function backFunction(){
             //ListCurves2D.listObjects[nc-1].draw("curve2d");
         }
         else{
-            var name="reconstructedCurve"+(ns-1).toString();
-            console.log(name);
-            var reconstructed=setup.scene.getObjectByName(name);
-            //setup.scene.remove(stroke);
-            if(reconstructed!= undefined){ 
-                ListCurves3D.popCurve();
-                setup.scene.remove(reconstructed);
-                dispose3(reconstructed);
-            }
+            removeCurveFromScene(ns-1);
             ListCurves2D.popCurve();
             ListCurvesShadow.popCurve();
         }
@@ -56,19 +48,19 @@ function clear(){
     ModeManage.focus();
     var n=ListCurves3D.number;
     for(var i=0;i<n;i++){
-        var name="reconstructedCurve"+i.toString();
-        var reconstructed=setup.scene.getObjectByName(name);
-        if(reconstructed!= undefined){ 
+        //var name="Curve"+i.toString();
+        //var reconstructed=setup.scene.getObjectByName(name);
+        //if(reconstructed!= undefined){ 
             ListCurves3D.popCurve();
-            setup.scene.remove(reconstructed);
-            dispose3(reconstructed);
-        }
+            //setup.scene.remove(reconstructed);
+           // dispose3(reconstructed);
+       // }
     }
     n=ListCurves2D.number;
     for(var i=0;i<n;i++) ListCurves2D.popCurve();
     n=ListCurvesShadow.number;
     for(var i=0;i<n;i++) ListCurvesShadow.popCurve();
-    var stroke=setup.scene.getObjectByName("CurrentCurve");
+   /* var stroke=setup.scene.getObjectByName("CurrentCurve");
     var sstroke=setup.scene.getObjectByName("shadowOfCurve");
     if(stroke!=undefined){
         setup.scene.remove(stroke);
@@ -77,10 +69,67 @@ function clear(){
     if(sstroke!=undefined){    
         setup.scene.remove(sstroke);    
         dispose3(sstroke);    
+    }*/
+    for (var i = setup.scene.children.length - 1; i >= 0 ; i -- ) {
+        var obj = setup.scene.children[i];
+        if ( obj.name !== "ReferencePlane" && obj.name !== "FloorPlane" && obj.type !== "HemisphereLight" 
+           && obj.type !== "AmbientLight" && obj.type!== "DirectionalLight") {
+            setup.scene.remove(obj);
+            dispose3(obj);
+        }
     }
-    
+}
+function RenderTubes(){
+    var tuberender=document.getElementById("checkRender");
+    var n=ListCurves3D.number;
+    if(tuberender.checked){
+        if(n>0){
+            for(key in ListCurves3D.list){
+                var mesh=new THREE.Mesh(ListCurves3D.list[key].tube,materialTubeGeometry);
+                mesh.name="Tube"+ListCurves3D.list[key].name;
+                setup.scene.add(mesh);
+            }   
+        }
+    }
+    else{
+        if(n>0){
+            for(var i=0;i<n;i++){
+                var mesh=setup.scene.getObjectByName("TubeCurve"+i.toString());
+                if(mesh!=undefined){
+                  setup.scene.remove(mesh);
+                  dispose3(mesh);  
+                } 
+            }
+        }
+    }
+}
+function RenderShadows(){
+    var tuberender=document.getElementById("checkShadow");
+    var n=ListCurves3D.number;
+    if(tuberender.checked){
+        if(n>0){
+            var t=0;
+            for(key in ListCurves3D.list){
+                drawProjectingOnPlane(ListCurves3D.list[key].controlpoints,t);
+                t++;
+            }   
+        }
+    }
+    else{
+        if(n>0){
+            for(var i=0;i<n;i++){
+                var meshshadow=setup.scene.getObjectByName("shadowOfCurve"+i.toString());
+                if(meshshadow!=undefined){
+                  setup.scene.remove(meshshadow);
+                  dispose3(meshshadow);  
+                } 
+            }
+        }
+    }
 }
 d3.select("#backButton").on("click",backFunction);
 d3.select("#deformButton").on("click",deformFunction);
 d3.select("#joinButton").on("click",joinCurveFunction);
 d3.select("#clearButton").on("click",clear);
+d3.select("#checkRender").on("click",RenderTubes);
+d3.select("#checkShadow").on("click",RenderShadows);

@@ -5,7 +5,7 @@ function onMouseClick(){
         //console.log(intersects);
         if(intersects.length>0){
             var intersected=intersects[0];
-            console.log(intersected);
+            console.log(intersects);
             if(intersected.object.type=="Mesh" && intersected.object.name=="ReferencePlane"){
                 if(searchIntersectedObject("ReferencePlane")){
                     intersected.object.material.transparent=true;
@@ -17,6 +17,25 @@ function onMouseClick(){
                     intersected.object.material.opacity=1;    
                     ListIntersectionObjects["ReferencePlane"]=new IntersectionObject("ReferencePlane","Mesh"); 
                     symmetrize();
+                }
+            }
+            else if(intersected.object.type=="Mesh" && intersected.object.name.startsWith("TubeCurve")){
+                var name=intersected.object.name;
+                if(searchIntersectedObject(name)){
+                    /*intersected.object.material.color.set(0x996633);
+                    intersected.object.material.emissive.set(0x000000);
+                    intersected.object.material.especular=0xe8b53b;
+                    intersected.object.material.shading=THREE.SmoothShading;*/
+                    intersected.object.material=materialTubeGeometry;
+                    delete ListIntersectionObjects[name];
+                }
+                else{
+                    /*intersected.object.material.color.set(0x4a3232);
+                    intersected.object.material.emissive.set(0x8e040b);
+                    intersected.object.material.especular=0x0f0d0d;
+                    intersected.object.material.shading=THREE.FlatShading;*/
+                    intersected.object.material=materialTubeGeometrySelected;
+                    ListIntersectionObjects[name]=new IntersectionObject(name,"Mesh");   
                 }
             }
             else if(intersected.object.type=="LineSegments"){
@@ -200,7 +219,7 @@ function onMouseUp() {
         //ListCurves2D.listObjects[idcurve].draw("curve2d");
         //setup.scene.remove(short.LineStroke);
         //dispose3(short.LineStroke);
-        drawProjectingOnPlane(short.pointsStroke);
+        //drawProjectingOnPlane(short.pointsStroke);
         short.pointsStroke=[];
         //var cp=getCriticalPoints(short.pointsStroke2D);
         var cp=ListCurves2D.listCP[idcurve];
@@ -235,14 +254,15 @@ function onMouseUp() {
         console.log(arraycp);*/
         var match=matchCriticalPoints(idcurve,ListCurves2D,ListCurvesShadow);
         if(match){
-            var pxyz=reconstruct3DCurve(idcurve,ListCurves2D,ListCurvesShadow);
+            var geopxyz=reconstruct3DCurve(idcurve,ListCurves2D,ListCurvesShadow);
             var stroke=setup.scene.getObjectByName("CurrentCurve");
             var strokeS=setup.scene.getObjectByName("CurrentCurveShadow");
             setup.scene.remove(stroke);
             setup.scene.remove(strokeS);
             dispose3(stroke);
             dispose3(strokeS);
-            ListCurves3D.addCurve(pxyz);
+            //ListCurves3D.addCurve(pxyz);
+            addCurve3D(geopxyz,"reconstructed","");
         }
         else{
             ListCurvesShadow.popCurve();
@@ -274,10 +294,10 @@ function onMouseUp() {
         var listindex=[];
         var listindexc=[];
         var listoject=[];
-        for(var i=0;i<ListCurves3D.listObjects.length;i++){
+        for(var i=0;i<ListCurves3D.number;i++){
             /*var start=threeDToScreenSpace(ListCurves3D.listObjects[i].getPoint(0));
             var end=threeDToScreenSpace(ListCurves3D.listObjects[i].getPoint(1));*/
-            var name="reconstructedCurve"+i.toString();
+            var name="Curve"+i.toString();
             console.log(name);
             var curve=setup.scene.getObjectByName(name); 
             var start=threeDToScreenSpace(curve.geometry.vertices[0]);
@@ -301,7 +321,7 @@ function onMouseUp() {
         if(listid.length>0){
             var media=new THREE.Vector3(0,0,0);
             for(var i=0;i<listid.length;i++){
-                var name="reconstructedCurve"+listid[i].toString();
+                var name="Curve"+listid[i].toString();
                 var curve=setup.scene.getObjectByName(name); 
                 media.add(curve.geometry.vertices[listindex[i]]);
                 var curveVertices=LineSegmentToLineGeometry(curve.geometry.vertices);
@@ -320,12 +340,39 @@ function onMouseUp() {
             media.divideScalar(listid.length);   
             
             for(var i=0;i<listid.length;i++){
-                var name="reconstructedCurve"+listid[i].toString();
+                var name="Curve"+listid[i].toString();
                 //console.log(name);
                 var curve=setup.scene.getObjectByName(name); 
                 curve.geometry.vertices[listindex[i]].copy(media);
                 listoject[i].updateVertices3();
                 curve.geometry.verticesNeedUpdate=true;
+                
+                //if we can update tubegeoemtry would be better
+                /*ListCurves3D.list[name].tube.lineDistancesNeedUpdate=true;
+                ListCurves3D.list[name].tube.normalsNeedUpdate=true;
+                ListCurves3D.list[name].tube.verticesNeedUpdate=true;
+                */
+                ListCurves3D.list[name].compute(listoject[i].curveVertex);
+                var tuberender=document.getElementById("checkRender");
+                var shadowrender=document.getElementById("checkShadow");
+                if(tuberender.checked){
+                    var meshtodelete=setup.scene.getObjectByName("Tube"+name);
+                    if (meshtodelete!=undefined){
+                        setup.scene.remove(meshtodelete);
+                        dispose3(meshtodelete);
+                    }
+                    var mesh=new THREE.Mesh(ListCurves3D.list[name].tube,materialTubeGeometry);
+                    mesh.name="Tube"+name;
+                    setup.scene.add(mesh);
+                }
+                 if(shadowrender.checked){
+                    var meshshadow=setup.scene.getObjectByName("shadowOfCurve"+listid[i].toString());
+                    if(meshshadow!=undefined){
+                      setup.scene.remove(meshshadow);
+                      dispose3(meshshadow);  
+                    }
+                    drawProjectingOnPlane(ListCurves3D.list[name].controlpoints,listid[i]); 
+                }
             }
         }
         short.pointsStroke2D=[];
