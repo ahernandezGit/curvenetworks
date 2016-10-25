@@ -1,6 +1,5 @@
 function onMouseClick(){
     if(ModeManage.selectObject.value){
-        console.log("select mode");
         var intersects = ModeManage.selectObject.raycaster.intersectObjects(setup.scene.children);
         //console.log(intersects);
         if(intersects.length>0){
@@ -28,6 +27,11 @@ function onMouseClick(){
                     intersected.object.material.shading=THREE.SmoothShading;*/
                     intersected.object.material=materialTubeGeometry;
                     delete ListIntersectionObjects[name];
+                    var perfilshadow=setup.scene.getObjectByName("PerfilCurve");
+                    if(perfilshadow!=undefined){
+                        setup.scene.remove(perfilshadow);
+                        dispose3(perfilshadow);
+                    }
                 }
                 else{
                     /*intersected.object.material.color.set(0x4a3232);
@@ -35,13 +39,19 @@ function onMouseClick(){
                     intersected.object.material.especular=0x0f0d0d;
                     intersected.object.material.shading=THREE.FlatShading;*/
                     intersected.object.material=materialTubeGeometrySelected;
-                    ListIntersectionObjects[name]=new IntersectionObject(name,"Mesh");   
+                    ListIntersectionObjects[name]=new IntersectionObject(name,"Mesh");
+                    var perfilshadow=setup.scene.getObjectByName("PerfilCurve");
+                    if(perfilshadow!=undefined){
+                        setup.scene.remove(perfilshadow);
+                        dispose3(perfilshadow);
+                    }
                 }
             }
             else if(intersected.object.type=="LineSegments"){
                 var name=intersected.object.name;
                 if(searchIntersectedObject(name)){
-                    intersected.object.material.linewidth=3;
+                    if(name.startWith("shadow")) intersected.object.material.linewidth=1;
+                    else intersected.object.material.linewidth=3;
                     intersected.object.material.opacity=1;    
                     delete ListIntersectionObjects[name];
                 }
@@ -53,19 +63,46 @@ function onMouseClick(){
             }
         }
     }
+    /*if(ModeManage.drawCurve.value){
+        var intersects = ModeManage.drawCurve.raycaster.intersectObjects([DrawPlane,InitialPlane,ReferencePlane]);
+        var intersected=intersects[0];
+        if(intersected!=undefined && intersected.object.name==="DrawPlane"){
+            if(searchIntersectedObject("DrawPlane")){
+                 DrawPlane.material.opacity=0.2;
+                 ModeManage.drawCurve.selected=false;
+                 setup.controls.enabled=false; 
+                 delete ListIntersectionObjects["DrawPlane"];
+            }
+            else{
+                 DrawPlane.material.opacity=0.7;
+                 ModeManage.drawCurve.selected=true;
+                 setup.controls.enabled=true; 
+                 ListIntersectionObjects["DrawPlane"]=new IntersectionObject("DrawPlane","Mesh"); 
+            }    
+        }
+        else{
+            console.log("no intersect draw plane");
+       }
+    }*/ 
 }
 function onMouseDown(){
     var event=d3.event;
     if(ModeManage.drawCurve.value){
         var short=ModeManage.drawCurve;
-        short.isdrawing = true;
-        short.LineStroke = new THREE.Object3D();
-        short.LineStroke.name="CurrentCurve";
-        setup.scene.add(short.LineStroke);
-        short.LastPoint=projectToFarPlane(event);
-        short.pointsStroke.push(short.LastPoint);  
-        short.pointsStroke2D.push(mouseOnScreen2D(event));  
-        //console.log("mousedown");
+        /*if(short.selected){
+            console.log("selected mouse down");
+        }
+        else{*/
+            console.log("dont selected");
+            short.isdrawing = true;
+            short.LineStroke = new THREE.Object3D();
+            short.LineStroke.name="CurrentCurve";
+            short.normalDrawPlane=getNormalDrawPlane(DrawPlane);
+            setup.scene.add(short.LineStroke);
+            short.LastPoint=projectToPlane(event,DrawPlane.geometry.vertices[0].clone(),short.normalDrawPlane,false);
+            short.pointsStroke.push(short.LastPoint);  
+            short.pointsStroke2D.push(mouseOnScreen2D(event));      
+        //}
     }
     if(ModeManage.drawShadow.value){
         var short=ModeManage.drawShadow;
@@ -116,16 +153,36 @@ function onMouseMove() {
     var event=d3.event;
     if(ModeManage.drawCurve.value){
         var short=ModeManage.drawCurve;
-        
-        if(!short.isdrawing) return;
-        short.currentPoint=projectToFarPlane(event);
-        short.pointsStroke.push(short.currentPoint);
-        short.pointsStroke2D.push(mouseOnScreen2D(event));  
-        var geometryLine = new THREE.Geometry();
-        geometryLine.vertices.push(short.LastPoint,short.currentPoint);
-        short.LastPoint=short.currentPoint;
-        var line = new THREE.Line( geometryLine, short.materialCurve );
-        short.LineStroke.add(line);
+        /*var mouse=mouseNDCXY(event);
+        short.raycaster.setFromCamera(mouse,setup.camera);	
+        if(short.selected){
+            console.log("selected move");
+        }
+        else{*/
+            console.log("dont selected");
+            /*var intersect = short.raycaster.intersectObjects([DrawPlane,InitialPlane,ReferencePlane]);
+            if(intersect.length>0){
+                var intersected=intersect[0];
+                if(intersected.object.name==="DrawPlane"){
+                    //intersected.object.material.transparent=false;
+                    intersected.object.material.opacity=0.7;
+                }
+                else{
+                    DrawPlane.material.opacity=0.2;
+                }
+            }
+            else DrawPlane.material.opacity=0.2;
+            */
+            if(!short.isdrawing) return;
+            short.currentPoint=projectToPlane(event,DrawPlane.geometry.vertices[0].clone(),short.normalDrawPlane,false);
+            short.pointsStroke.push(short.currentPoint);
+            short.pointsStroke2D.push(mouseOnScreen2D(event));  
+            var geometryLine = new THREE.Geometry();
+            geometryLine.vertices.push(short.LastPoint,short.currentPoint);
+            short.LastPoint=short.currentPoint;
+            var line = new THREE.Line( geometryLine, short.materialCurve );
+            short.LineStroke.add(line);   
+       //}
     }
     if(ModeManage.drawShadow.value){
         var short=ModeManage.drawShadow;
@@ -158,7 +215,40 @@ function onMouseMove() {
         var mouse=mouseNDCXY(event);
         ModeManage.selectObject.raycaster.setFromCamera(mouse,setup.camera);	
         ModeManage.selectObject.raycaster.linePrecision=0.1;    
-        
+        var intersects = ModeManage.selectObject.raycaster.intersectObjects(setup.scene.children);
+        if(intersects.length>0){
+            var intersected=intersects[0];
+            if(intersected.object.type=="Mesh" && intersected.object.name.startsWith("TubeCurve")){
+                var pathLineGeometry=new THREE.Geometry();
+                var name=intersected.object.name.substring(4,intersected.object.name.length);
+                var meshshadow=setup.scene.getObjectByName("shadowOf"+name.toString());
+                var mesh=setup.scene.getObjectByName(name);
+                if(meshshadow!=undefined){
+                  var shadowvertices=meshshadow.geometry.vertices;
+                  for(var i=0;i<shadowvertices.length;i++){
+                      pathLineGeometry.vertices.push(mesh.geometry.vertices[i],shadowvertices[i]);
+                  }
+                  var materialpath=new THREE.LineBasicMaterial({color: 0xDF0101});
+                  var line = new THREE.LineSegments( pathLineGeometry, materialpath );
+                  line.name="PerfilCurve";    
+                  setup.scene.add( line );    
+                }
+            }
+            else{
+                var perfilshadow=setup.scene.getObjectByName("PerfilCurve");
+                if(perfilshadow!=undefined){
+                    setup.scene.remove(perfilshadow);
+                    dispose3(perfilshadow);
+                }
+            }
+        }
+        else{
+                var perfilshadow=setup.scene.getObjectByName("PerfilCurve");
+                if(perfilshadow!=undefined){
+                    setup.scene.remove(perfilshadow);
+                    dispose3(perfilshadow);
+                }
+        }
     } 
     if(ModeManage.deformCurve.value){
         var short=ModeManage.deformCurve;
@@ -207,22 +297,32 @@ function onMouseMove() {
         var line = new THREE.Line( geometryLine, short.materialCurve );
         short.LineStroke.add(line);
     }
+    //drawFarPlane();
 }
 function onMouseUp() {
     var event=d3.event;
+     //drawFarPlane();
     if(ModeManage.drawCurve.value){
         var short=ModeManage.drawCurve;
         if(!ModeManage.drawCurve.isdrawing) return;
         short.isdrawing = false;
         //converting points to parametricCurve
-        var idcurve=ListCurves2D.addCurve(short.pointsStroke2D);
+        var idto=getAvailableIndex3DCurves();
+        var idcurve=ListCurves2D.addCurve(short.pointsStroke2D,idto);
+        console.log("index curve ", idcurve,idto);
+        ListCurvesShadow.addCurve([],idto);
+        var geometryReconstructed=new THREE.Geometry();
+        for(var i=0;i<short.pointsStroke.length-1;i++){
+            geometryReconstructed.vertices.push(short.pointsStroke[i],short.pointsStroke[i+1]);
+        }
+        addCurve3D([geometryReconstructed,short.pointsStroke],"reconstructed","",idto);
         //ListCurves2D.listObjects[idcurve].draw("curve2d");
         //setup.scene.remove(short.LineStroke);
         //dispose3(short.LineStroke);
         //drawProjectingOnPlane(short.pointsStroke);
         short.pointsStroke=[];
         //var cp=getCriticalPoints(short.pointsStroke2D);
-        var cp=ListCurves2D.listCP[idcurve];
+        //var cp=ListCurves2D.listCP[idcurve];
         /*var arraycp=[];
         for(var j=0;j<cp.length;j++){
             arraycp.push(project2DVectorToFarPlane(short.pointsStroke2D[cp[j]]));
@@ -230,7 +330,8 @@ function onMouseUp() {
         drawPoints(arraycp);
         console.log(arraycp);*/
         short.pointsStroke2D=[];
-        //setup.scene.remove( short.LineStroke );
+        setup.scene.remove( short.LineStroke );
+        dispose3(short.LineStroke);
         //console.log("mouseup");
     }
     if(ModeManage.drawShadow.value){
@@ -238,38 +339,63 @@ function onMouseUp() {
         ModeManage.drawGuidesLine.value=false;
         if(!short.isdrawing) return;
         short.isdrawing = false;
-        //converting points to parametricCurve
-        var idcurve=ListCurvesShadow.addCurve(short.pointsStroke2D);
-        //ListCurvesShadow.listObjects[idcurve].draw("shadow");
-        //setup.scene.remove(short.LineStroke);
-        //dispose3(short.LineStroke);
-        short.pointsStroke=[];
-        var cp=ListCurvesShadow.listCP[idcurve];
-        //console.log(cp);
-        /*var arraycp=[];
-        for(var j=0;j<cp.length;j++){
-            arraycp.push(Position3D(short.pointsStroke2D[cp[j]]));
-        }
-        drawPoints(arraycp);
-        console.log(arraycp);*/
-        var match=matchCriticalPoints(idcurve,ListCurves2D,ListCurvesShadow);
-        if(match){
-            var geopxyz=reconstruct3DCurve(idcurve,ListCurves2D,ListCurvesShadow);
-            var stroke=setup.scene.getObjectByName("CurrentCurve");
-            var strokeS=setup.scene.getObjectByName("CurrentCurveShadow");
-            setup.scene.remove(stroke);
-            setup.scene.remove(strokeS);
-            dispose3(stroke);
-            dispose3(strokeS);
-            //ListCurves3D.addCurve(pxyz);
-            addCurve3D(geopxyz,"reconstructed","");
+        if(short.id!=-1){
+            var Curve2D=ListCurves2D.listPoints2D[short.id.toString()];
+            removeCurveFromScene(short.id);
+            var idcurve=ListCurvesShadow.addCurve(short.pointsStroke2D,short.id);
+            var idcurvec=ListCurves2D.addCurve(Curve2D,short.id);
+            console.log("indexes ",idcurve,short.id,idcurvec);
+            //ListCurvesShadow.listObjects[idcurve].draw("shadow");
+            //setup.scene.remove(short.LineStroke);
+            //dispose3(short.LineStroke);
+            short.pointsStroke=[];
+            //console.log(cp);
+            /*var arraycp=[];
+            for(var j=0;j<cp.length;j++){
+                arraycp.push(Position3D(short.pointsStroke2D[cp[j]]));
+            }
+            drawPoints(arraycp);
+            console.log(arraycp);*/
+            var match=matchCriticalPoints(idcurve,ListCurves2D,ListCurvesShadow);
+            if(match){
+                if(short.pointsStroke2D.length<3){
+                    var geopxyz=reconstructProjectOnNormalDirection(short.pointsStroke2D[0],ListCurves2D.listPoints2D[idcurve]);
+                }
+                else var geopxyz=reconstruct3DCurve(idcurve,ListCurves2D,ListCurvesShadow);
+                console.log(geopxyz[0].length,geopxyz[1].length);
+                var stroke=setup.scene.getObjectByName("CurrentCurve");
+                var strokeS=setup.scene.getObjectByName("CurrentCurveShadow");
+                 if(stroke!= undefined) {
+                    setup.scene.remove(stroke);
+                    dispose3(stroke);
+                }
+                setup.scene.remove(strokeS);
+                dispose3(strokeS);
+                //ListCurves3D.addCurve(pxyz);
+                
+                addCurve3D(geopxyz,"reconstructed","",idcurve);
+                short.id=-1;
+                ModeManage.focus();
+            }
+            else{
+                ListCurvesShadow.removeCurve(idcurve);
+                draw2DCurveOnFarPlane(Curve2D,idcurve);
+                var strokeS=setup.scene.getObjectByName("CurrentCurveShadow");
+                setup.scene.remove(strokeS);
+                dispose3(strokeS);
+            }        
         }
         else{
-            ListCurvesShadow.popCurve();
-            var stroke=setup.scene.getObjectByName("CurrentCurveShadow");
-            setup.scene.remove(stroke);
-            dispose3(stroke);
+            var strokes=setup.scene.getObjectByName("CurrentCurveShadow");
+            var stroke=setup.scene.getObjectByName("CurrentCurve");
+            setup.scene.remove(strokes);
+            if(stroke!= undefined) {
+                setup.scene.remove(stroke);
+                dispose3(stroke);
+            }
+            dispose3(strokes);    
         }
+        
         short.pointsStroke2D=[];
     }
     if(ModeManage.deformCurve.value){
@@ -294,23 +420,23 @@ function onMouseUp() {
         var listindex=[];
         var listindexc=[];
         var listoject=[];
-        for(var i=0;i<ListCurves3D.number;i++){
+        for(key in ListCurves3D.list){
             /*var start=threeDToScreenSpace(ListCurves3D.listObjects[i].getPoint(0));
             var end=threeDToScreenSpace(ListCurves3D.listObjects[i].getPoint(1));*/
-            var name="Curve"+i.toString();
+            var name=key;
             console.log(name);
             var curve=setup.scene.getObjectByName(name); 
             var start=threeDToScreenSpace(curve.geometry.vertices[0]);
             var end=threeDToScreenSpace(curve.geometry.vertices[curve.geometry.vertices.length-1]);
             if(start.distanceTo(center)<r){
-                listid.push(i);
+                listid.push(parseInt(name.substring(5,name.length)));
                 listindex.push(0);
                 listindexc.push(0);
                 console.log(start.distanceTo(center));
                 continue;
             }
             if(end.distanceTo(center)<r){
-                listid.push(i);
+                listid.push(parseInt(name.substring(5,name.length)));
                 console.log(end.distanceTo(center));
                 listindex.push(curve.geometry.vertices.length-1);
                 listindexc.push(curve.geometry.vertices.length/2);
@@ -389,9 +515,26 @@ function onKeyDown(){
     }
     //letter esc
     if(event.keyCode == 27){
-        ModeManage.focus();
-        removeGuides();
-        setup.controls.enabled=true;
+        var existsSelectedObject=false;
+        for (var key in ListIntersectionObjects) {
+            if (ListIntersectionObjects.hasOwnProperty(key)){
+              existsSelectedObject=true;
+              break;
+            } 
+        }
+        if(existsSelectedObject){
+            for (var key in ListIntersectionObjects) {
+                var name=ListIntersectionObjects[key].name;
+                delete ListIntersectionObjects[name];
+                if(name.startsWith("TubeCurve")) var id=name.substring(9,name.length);
+                else if(name.startsWith("Curve")) var id=name.substring(5,name.length);
+                removeCurveFromScene(parseInt(id));
+            }
+        }
+        else{
+            ModeManage.focus();
+            removeGuides();
+        }
     }
     //letter s
     if(event.keyCode == 83){
@@ -404,6 +547,13 @@ function onKeyDown(){
         var cross=new THREE.LineSegments(ModeManage.drawGuidesLine.geometry,ModeManage.drawGuidesLine.material);
         cross.name="GuideLines";
         setup.scene.add(cross);
+        // select first shadowcurve
+        for(key in ListIntersectionObjects){
+            if(key.startsWith("shadow")) {
+                ModeManage.drawShadow.id=parseInt(key.substring(13,key.length));
+                break;
+            }
+        }
     }
     //ctrl+z
     //letter z is 90

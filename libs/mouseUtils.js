@@ -80,6 +80,19 @@ function projectToPlane(event,point,normal,flag){
     var t=point.clone().sub(cameraposition).dot(normal)/dir.dot(normal);
     return cameraposition.add(dir.multiplyScalar(t));
 }
+function project2DToPlane(position,point,normal,flag){
+    flag= flag || false;
+    if(!flag) var mouse=new THREE.Vector2();
+    mouse.x = ( position.x / window.innerWidth ) * 2 - 1;
+    mouse.y = - ( position.y / window.innerHeight ) * 2 + 1;		
+    var vector = new THREE.Vector3();
+    vector.set( mouse.x ,mouse.y , 0.5 );
+    vector.unproject( setup.camera);
+    var cameraposition=setup.camera.position.clone();
+    var dir = vector.sub(cameraposition).normalize();
+    var t=point.clone().sub(cameraposition).dot(normal)/dir.dot(normal);
+    return cameraposition.add(dir.multiplyScalar(t));
+}
 function threeDToScreenSpace(v){
     var vector=v.clone().project(setup.camera);
    //var matrix = new THREE.Matrix4();

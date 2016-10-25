@@ -123,61 +123,55 @@ function imageSpaceAligned(A,a,B){
         else return 0;
     }
 }
-
+//project 2d points over the line passing by p and in the direction of the normal to the floor plane
+function reconstructProjectOnNormalDirection(p,points){
+    //p to 3D on the floor plane
+    var p3=Position3D(p);
+    var dir=p3.add(DirectionalVector);
+    var dir2D=threeDToScreenSpace(dir);
+    dir2D.sub(p);
+    dir2D.normalize();
+    var n=points.length;
+    var vertices=[];
+    for(var i=0;i<n;i++){
+        var toproject=points[i].clone().sub(p);
+        var displacement=dir2D.clone().multiplyScalar(toproject.dot(dir2D));
+        var v2d=p.clone().add(displacement);
+        vertices.push(project2DToPlane(v2d,p3,new THREE.Vector3(0,1,0)));
+    }
+    var geometry=new THREE.Geometry();
+    for(var i=0;i<vertices.length-1;i++){
+        geometry.vertices.push(vertices[i],vertices[i+1]);
+    }
+    return [geometry,vertices];
+}
 function matchCriticalPoints(id,ListCurve,ListShadow){
     //match begin of the curve and shadow
-    var shadow=ListShadow.listPoints2D[id];
-    var curve=ListCurve.listPoints2D[id];
-    var ic=ListCurve.listCP[id];
-    var is=ListShadow.listCP[id];
-    var dist=imageSpaceAligned(shadow[is[0]],Position3D(shadow[is[0]]),curve[ic[0]]);
-    var dist1=imageSpaceAligned(shadow[is[is.length-1]],Position3D(shadow[is[is.length-1]]),curve[ic[0]]);
-    var match=true;
-    var couple=[[0,0]];
-    /*if(dist<dist1){
-        console.log("orientacao boa");
-        ListCurve.listObjects[id]=new CatmullRomInterpolation(51,curve,0.6);
-        ListShadow.listObjects[id]=new CatmullRomInterpolation(51,shadow,0.6);
-        for(var j=0;j<11;j++){
-            var p=ListCurve.listObjects[id].interpolateForT(j/10);
-            var q=ListShadow.listObjects[id].interpolateForT(j/10);
-            p=project2DVectorToFarPlane({x:p.x,y:p.y});
-            q=Position3D({x:q.x,y:q.y});
-            //drawLine(p,q);
-        } 
+    var shadow=ListShadow.listPoints2D[id.toString()];
+    if(shadow.length<3){
+        return true;
     }
     else{
-        mirrorIndexArray(is,shadow.length);
-        shadow.reverse();
-        ListCurve.listObjects[id]=new CatmullRomInterpolation(51,curve,0.6);
-        ListShadow.listObjects[id]=new CatmullRomInterpolation(51,shadow,0.6);
-        for(var j=0;j<11;j++){
-            var p=ListCurve.listObjects[id].interpolateForT(j/10);
-            var q=ListShadow.listObjects[id].interpolateForT(j/10);
-            p=project2DVectorToFarPlane({x:p.x,y:p.y});
-            q=Position3D({x:q.x,y:q.y});
-            //drawLine(p,q);
+        var curve=ListCurve.listPoints2D[id.toString()];
+        var ic=ListCurve.listCP[id.toString()];
+        var is=ListShadow.listCP[id.toString()];
+        var dist=imageSpaceAligned(shadow[is[0]],Position3D(shadow[is[0]]),curve[ic[0]]);
+        var dist1=imageSpaceAligned(shadow[is[is.length-1]],Position3D(shadow[is[is.length-1]]),curve[ic[0]]);
+        var match=true;
+        var couple=[[0,0]];
+        /*if(dist<dist1){
+            console.log("orientacao boa");
+            ListCurve.listObjects[id]=new CatmullRomInterpolation(51,curve,0.6);
+            ListShadow.listObjects[id]=new CatmullRomInterpolation(51,shadow,0.6);
+            for(var j=0;j<11;j++){
+                var p=ListCurve.listObjects[id].interpolateForT(j/10);
+                var q=ListShadow.listObjects[id].interpolateForT(j/10);
+                p=project2DVectorToFarPlane({x:p.x,y:p.y});
+                q=Position3D({x:q.x,y:q.y});
+                //drawLine(p,q);
+            } 
         }
-    }*/
-    
-    if(Math.abs(dist)<25){
-        //drawLine(Position3D(shadow[is[0]]),project2DVectorToFarPlane(curve[ic[0]]));  
-        console.log("orientacao boa");
-        ListCurve.listObjects[id]=new CatmullRomInterpolation(51,curve,0.6);
-        ListShadow.listObjects[id]=new CatmullRomInterpolation(51,shadow,0.6);
-        for(var j=0;j<11;j++){
-            var p=ListCurve.listObjects[id].interpolateForT(j/10);
-            var q=ListShadow.listObjects[id].interpolateForT(j/10);
-            p=project2DVectorToFarPlane({x:p.x,y:p.y});
-            q=Position3D({x:q.x,y:q.y});
-            //drawLine(p,q);
-        } 
-    }
-    else{
-        console.log("trocando de orientacao");
-        console.log(dist);
-        dist=imageSpaceAligned(shadow[is[is.length-1]],Position3D(shadow[is[is.length-1]]),curve[ic[0]]);
-        if(Math.abs(dist)<25){
+        else{
             mirrorIndexArray(is,shadow.length);
             shadow.reverse();
             ListCurve.listObjects[id]=new CatmullRomInterpolation(51,curve,0.6);
@@ -188,60 +182,93 @@ function matchCriticalPoints(id,ListCurve,ListShadow){
                 p=project2DVectorToFarPlane({x:p.x,y:p.y});
                 q=Position3D({x:q.x,y:q.y});
                 //drawLine(p,q);
-            } 
-            //drawLine(Position3D(shadow[is[0]]),project2DVectorToFarPlane(curve[ic[0]]));
-        }
-        else{
-          var line=setup.scene.getObjectByName("lineTest");
-          if(line!=undefined){
-                setup.scene.remove(line);
-          }    
-          console.log("no match");  
-          couple.pop();    
-          match=false;    
-        } 
-        console.log(dist);
-    }
-    if(match){
-        console.log("begin mached");
-        //we iterate through the critical points of the shadow
-        var valid=true;
-        var i=1;
-        var j0=1;
-        var t=0; // for prevent infinity loop
-        while(valid && i<is.length && t<500){
-            console.log("valid ",valid);
-            console.log("i",i);
-            console.log("j0",j0);
-            for(var j=j0;j<ic.length;j++){
-                if(Math.abs(imageSpaceAligned(shadow[is[i]],Position3D(shadow[is[i]]),curve[ic[j]]))<25){
-                    couple.push([i,j]);
-                    i++;
-                    j0=j+1;
-                    break;
-                }
-                else if(imageSpaceAligned(shadow[is[i-1]],Position3D(shadow[is[i-1]]),curve[ic[j]])<0 || imageSpaceAligned(shadow[is[i]],Position3D(shadow[is[i]]),curve[ic[j]])>0){
-                    valid=false;
-                    break;
-                }
-                else valid=false;
             }
-            t++;
-        }
-        if(couple[couple.length-1][1]!=ic.length-1){
-            console.log("finish no match");
-            //match=false;
+        }*/
+
+        if(Math.abs(dist)<25){
+            //drawLine(Position3D(shadow[is[0]]),project2DVectorToFarPlane(curve[ic[0]]));  
+            console.log("orientacao boa");
+            ListCurve.listObjects[id.toString()]=new CatmullRomInterpolation(51,curve,0.6);
+            ListShadow.listObjects[id.toString()]=new CatmullRomInterpolation(51,shadow,0.6);
+            for(var j=0;j<11;j++){
+                var p=ListCurve.listObjects[id.toString()].interpolateForT(j/10);
+                var q=ListShadow.listObjects[id.toString()].interpolateForT(j/10);
+                p=project2DVectorToFarPlane({x:p.x,y:p.y});
+                q=Position3D({x:q.x,y:q.y});
+                //drawLine(p,q);
+            } 
         }
         else{
-          console.log("finish match");    
-        } 
-        console.log(couple);
+            console.log("trocando de orientacao");
+            console.log(dist);
+            dist=imageSpaceAligned(shadow[is[is.length-1]],Position3D(shadow[is[is.length-1]]),curve[ic[0]]);
+            if(Math.abs(dist)<25){
+                mirrorIndexArray(is,shadow.length);
+                shadow.reverse();
+                ListCurve.listObjects[id.toString()]=new CatmullRomInterpolation(51,curve,0.6);
+                ListShadow.listObjects[id.toString()]=new CatmullRomInterpolation(51,shadow,0.6);
+                for(var j=0;j<11;j++){
+                    var p=ListCurve.listObjects[id.toString()].interpolateForT(j/10);
+                    var q=ListShadow.listObjects[id.toString()].interpolateForT(j/10);
+                    p=project2DVectorToFarPlane({x:p.x,y:p.y});
+                    q=Position3D({x:q.x,y:q.y});
+                    //drawLine(p,q);
+                } 
+                //drawLine(Position3D(shadow[is[0]]),project2DVectorToFarPlane(curve[ic[0]]));
+            }
+            else{
+              var line=setup.scene.getObjectByName("lineTest");
+              if(line!=undefined){
+                    setup.scene.remove(line);
+              }    
+              console.log("no match");  
+              couple.pop();    
+              match=false;    
+            } 
+            console.log(dist);
+        }
+        if(match && !flexibleMode){
+            console.log("begin mached");
+            //we iterate through the critical points of the shadow
+            var valid=true;
+            var i=1;
+            var j0=1;
+            var t=0; // for prevent infinity loop
+            while(valid && i<is.length && t<500){
+                console.log("valid ",valid);
+                console.log("i",i);
+                console.log("j0",j0);
+                for(var j=j0;j<ic.length;j++){
+                    if(Math.abs(imageSpaceAligned(shadow[is[i]],Position3D(shadow[is[i]]),curve[ic[j]]))<25){
+                        couple.push([i,j]);
+                        i++;
+                        //j0=j+1;
+                        break;
+                    }
+                    else if(imageSpaceAligned(shadow[is[i-1]],Position3D(shadow[is[i-1]]),curve[ic[j]])<0 || imageSpaceAligned(shadow[is[i]],Position3D(shadow[is[i]]),curve[ic[j]])>0){
+                        valid=false;
+                        break;
+                    }
+                    //else valid=false;
+                }
+                t++;
+            }
+            if(couple[couple.length-1][1]!=ic.length-1){
+                console.log("finish no match");
+                match=false;
+            }
+            else{
+              console.log("finish match");    
+            } 
+            console.log(couple);
+        }
+        else{
+          console.log("begin no match");
+          //match=true;    
+        }
+        return match;
     }
-    else{
-      console.log("begin no match");
-      //match=true;    
-    }
-    return match;
+    
 }
 function reconstruct3DCurve(id,ListCurve,ListShadow){
     //likely original method of the paper
@@ -254,8 +281,8 @@ function reconstruct3DCurve(id,ListCurve,ListShadow){
     var stroke2D=[];
     var shadow3D=[];
     for(var j=0;j<m;j++){
-        var p=ListCurve.listObjects[id].interpolateForT(j/(m-1));
-        var q=ListShadow.listObjects[id].interpolateForT(j/(m-1));
+        var p=ListCurve.listObjects[id.toString()].interpolateForT(j/(m-1));
+        var q=ListShadow.listObjects[id.toString()].interpolateForT(j/(m-1));
         stroke2D.push({x:p.x,y:p.y});
         //get line in world space passing by p  
         var pv=new THREE.Vector2();

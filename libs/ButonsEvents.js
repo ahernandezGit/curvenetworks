@@ -25,8 +25,6 @@ function backFunction(){
         }
         else{
             removeCurveFromScene(ns-1);
-            ListCurves2D.popCurve();
-            ListCurvesShadow.popCurve();
         }
         console.log("back after");
         console.log("curves ", ListCurves2D.number, " shadow ",ListCurvesShadow.number);    
@@ -45,7 +43,8 @@ function joinCurveFunction(){
      setup.controls.enabled=false;
 }
 function clear(){
-    ModeManage.focus();
+    ModeManage.clean();
+    
     var n=ListCurves3D.number;
     for(var i=0;i<n;i++){
         //var name="Curve"+i.toString();
@@ -73,11 +72,12 @@ function clear(){
     for (var i = setup.scene.children.length - 1; i >= 0 ; i -- ) {
         var obj = setup.scene.children[i];
         if ( obj.name !== "ReferencePlane" && obj.name !== "FloorPlane" && obj.type !== "HemisphereLight" 
-           && obj.type !== "AmbientLight" && obj.type!== "DirectionalLight") {
+           && obj.type !== "AmbientLight" && obj.type!== "DirectionalLight" && obj.name !=="DrawPlane") {
             setup.scene.remove(obj);
             dispose3(obj);
         }
     }
+    ModeManage.focus();
 }
 function RenderTubes(){
     var tuberender=document.getElementById("checkRender");
@@ -93,8 +93,8 @@ function RenderTubes(){
     }
     else{
         if(n>0){
-            for(var i=0;i<n;i++){
-                var mesh=setup.scene.getObjectByName("TubeCurve"+i.toString());
+            for(key in ListCurves3D.list){
+                var mesh=setup.scene.getObjectByName("Tube"+key);
                 if(mesh!=undefined){
                   setup.scene.remove(mesh);
                   dispose3(mesh);  
@@ -117,8 +117,8 @@ function RenderShadows(){
     }
     else{
         if(n>0){
-            for(var i=0;i<n;i++){
-                var meshshadow=setup.scene.getObjectByName("shadowOfCurve"+i.toString());
+            for(key in ListCurves3D.list){
+                var meshshadow=setup.scene.getObjectByName("shadowOf"+key);
                 if(meshshadow!=undefined){
                   setup.scene.remove(meshshadow);
                   dispose3(meshshadow);  
@@ -126,6 +126,11 @@ function RenderShadows(){
             }
         }
     }
+}
+function FlexibleMode(){
+    var reconstructionMode=document.getElementById("checkMode");
+    if(reconstructionMode.checked) flexibleMode=false;
+    else FlexibleMode=true;
 }
 d3.select("#backButton").on("click",backFunction);
 d3.select("#deformButton").on("click",deformFunction);

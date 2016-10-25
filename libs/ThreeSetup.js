@@ -42,7 +42,9 @@ ThreeSetup.prototype.resize = function() {
 }
 
 ThreeSetup.prototype.render = function() {
-   
+    /*var flagRender= ModeManage.drawCurve.value || ModeManage.drawShadow.value || ModeManage.drawGuidesLine.value || ModeManage.deformCurve.value || ModeManage.joinCurves.value || ModeManage.selectObject.value;
+    var drawplane=this.scene.getObjectByName("DrawPlane");
+    if( drawplane!=undefined && !flagRender)  drawFarPlane();*/
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
 }

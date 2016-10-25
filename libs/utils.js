@@ -70,6 +70,24 @@ function drawProjectingOnPlane(curve,id){
     line.name="shadowOfCurve"+id.toString();
     setup.scene.add(line);
 }
+function draw2DCurveOnFarPlane(curve,id){
+    var material=ModeManage.drawCurve.materialCurve;
+    var geometry=new THREE.Geometry();
+    var curve3D=[];
+    
+    for(var i=0;i<curve.length;i++){
+        var p=project2DVectorToFarPlane(curve[i]);
+        curve3D.push(p);
+    }
+    for(var i=0;i<curve.length-1;i++){
+        geometry.vertices.push(curve3D[i],curve3D[i+1]);
+    }
+    var line = new THREE.LineSegments( geometry, material );
+    var other=setup.scene.getObjectByName("CurrentCurve");
+    if(other!== undefined) setup.scene.remove(other);
+    line.name="CurrentCurve";
+    setup.scene.add(line);
+}
 // mirror indexes from IndexArray in a array of size n
 function mirrorIndexArray(IndexArray,n){
     for(var i=1;i<IndexArray.length;i++){
@@ -185,24 +203,29 @@ function mirrorOnPlaneYZ(curve){
 //array[1] is an array of simple vertices 
 //symmetric is the name of the symmetric curve
 // id is the id to insert the curve in ListCruves3D. If not provided the curve is inserted at final 
-function addCurve3D(array,origin,symmetric,id){
+function addCurve3D(array,origin,symmetric,idto){
     symmetric= symmetric || ""; 
     var geometry=array[0];
     var vertices=array[1];
     var material=new THREE.LineBasicMaterial({ color: 0x564002, linewidth: 3});
     var line = new THREE.LineSegments( geometry, material );
-    var id=ListCurves3D.number;
-    if(id!=undefined){
-        if(symmetric=="")ListCurves3D.addCurve(vertices,"",id);
-        else ListCurves3D.addCurve(vertices,symmetric,id);    
+    if(idto!==undefined){
+        var id=idto;
+        if(symmetric=="")ListCurves3D.addCurve(vertices,"",idto);
+        else ListCurves3D.addCurve(vertices,symmetric,idto);
+        if(origin!="reconstructed"){
+            ListCurves2D.addCurve([],idto);
+            ListCurvesShadow.addCurve([],idto);
+        }
     }
     else{
+        var id=ListCurves3D.number;
         if(symmetric=="")ListCurves3D.addCurve(vertices);
         else ListCurves3D.addCurve(vertices,symmetric);    
-    }
-    if(origin!="reconstructed"){
-        ListCurves2D.addCurve([]);
-        ListCurvesShadow.addCurve([]);
+        if(origin!="reconstructed"){
+            ListCurves2D.addCurve([]);
+            ListCurvesShadow.addCurve([]);
+        }
     }
     line.name="Curve"+id.toString();
     setup.scene.add(line);
@@ -216,6 +239,9 @@ function addCurve3D(array,origin,symmetric,id){
     if(shadowrender.checked){
         drawProjectingOnPlane(vertices,id);
     }
+    console.log(ListCurves2D.number);
+    console.log(ListCurvesShadow.number);
+    console.log(ListCurves3D.number);
 }
 function isXequalsign(vertices){
    var n=0;
@@ -242,6 +268,8 @@ function removeCurveFromScene(id){
     var ShadowReconstructed=setup.scene.getObjectByName("shadowOfCurve"+id.toString());
     if(reconstructed!= undefined){ 
         ListCurves3D.removeCurve(name);
+        ListCurves2D.removeCurve(id);
+        ListCurvesShadow.removeCurve(id);
         setup.scene.remove(reconstructed);
         dispose3(reconstructed);
     }
@@ -277,7 +305,8 @@ function symmetrize(){
         var curve=setup.scene.getObjectByName(index[0]); 
         if(isXequalsign(curve.geometry.vertices)){
             var geo=mirrorOnPlaneYZ(curve.geometry);
-            addCurve3D(geo,"",index[0]);
+            var id=getAvailableIndex3DCurves();
+            addCurve3D(geo,"",index[0],id);
             curve.material.linewidth=3;
             curve.material.opacity=1;    
             delete ListIntersectionObjects[index[0]];
@@ -362,4 +391,55 @@ function symmetrize(){
     if(n==2){
         
     }
+}
+function drawFarPlane(){
+    function project(pos){
+        var vector = new THREE.Vector3();
+        vector.set( pos.x ,pos.y , 0.9 );
+       // console.log("vector antes ", vector);
+        vector.unproject( setup.camera);
+        vector.sub(setup.camera.position);
+        vector.copy(setup.camera.position.clone().add(vector));
+        return vector;
+    }
+    var drawplane=setup.scene.getObjectByName("DrawPlane"); 
+    if(ModeManage.flagDrawPlane){
+        
+        var leftTop=project({x:-0.8,y:0.8});
+        var rightTop=project({x:0.8,y:0.8});
+        var leftBot=project({x:-0.8,y:-0.8});
+        var rightBot=project({x:0.8,y:-0.8});
+        drawplane.geometry.vertices[0].copy(leftTop);
+        drawplane.geometry.vertices[1].copy(rightTop);
+        drawplane.geometry.vertices[2].copy(leftBot);
+        drawplane.geometry.vertices[3].copy(rightBot);
+        drawplane.geometry.verticesNeedUpdate=true;   
+        if(!drawplane.visible) drawplane.visible=true;
+    }
+    else{
+        drawplane.visible=false;
+    }
+}
+function getAvailableIndex3DCurves(){
+    var result="";
+    for(key in ListCurves3D.list){
+        result=key;
+    }
+    if (result==="") return 0;
+    else return parseInt(result.substring(5,result.length))+1;
+}
+
+/*var spritey = makeTextSprite( " prova1 ", { fontsize: 24, borderColor: {r:255, g:0, b:0, a:1.0}, backgroundColor: {r:255, g:100, b:100, a:0.8} } );
+spritey.position.set(0,0,0);
+setup.scene.add( spritey );
+*/
+
+function getNormalDrawPlane(plane){
+    var v1 = new THREE.Vector3();
+    var v2 = new THREE.Vector3();
+    var a=plane.geometry.vertices[0].clone();
+    var b=plane.geometry.vertices[1].clone();
+    var c=plane.geometry.vertices[2].clone();
+    var normal = v1.subVectors( c, b ).cross( v2.subVectors( a, b ) ).normalize();
+    return normal;
 }

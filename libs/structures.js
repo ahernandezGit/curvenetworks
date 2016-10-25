@@ -1,14 +1,18 @@
 var ModeManage= ModeManage || {};
 ModeManage={
+    flagDrawPlane:true,
     drawCurve : { 
         value: false, 
         isdrawing:false, 
         lastPoint: new THREE.Vector3(),
         currentPoint: new THREE.Vector3(),
         LineStroke : new THREE.Object3D(),
+        raycaster:new THREE.Raycaster(),
+        selected:false,
         pointsStroke : [],
         pointsStroke2D : [],
-        materialCurve : new THREE.LineBasicMaterial( { color: 0x000000, linewidth: 2 } )
+        materialCurve : new THREE.LineBasicMaterial( { color: 0x000000, linewidth: 2 } ),
+        normalDrawPlane: new THREE.Vector3()
     },
     drawShadow : {
         value: false, 
@@ -18,8 +22,9 @@ ModeManage={
         LineStroke : new THREE.Object3D(),
         pointsStroke : [],
         pointsStroke2D : [],
-        materialCurve : new THREE.LineBasicMaterial( { color: 0x3A2F0B, linewidth: 2 })  
+        materialCurve : new THREE.LineBasicMaterial( { color: 0x3A2F0B, linewidth: 2 }),  
         //materialCurve : new THREE.LineDashedMaterial( { color: 0x3A2F0B, linewidth: 1, dashSize:0.5, gapSize:0.5} ) 
+        id:-1  //id of the curve to associate this shadow 
     },
     drawGuidesLine : {
         value: false,  
@@ -71,7 +76,10 @@ ModeManage={
                this.drawGuidesLine.value=false;    
                this.selectObject.value=false;    
                this.deformCurve.value=false;  
-               this.joinCurves.value=false;      
+               this.joinCurves.value=false;
+               this.flagDrawPlane=true; 
+               DrawPlane.visible=true;    
+               //drawFarPlane();    
                break;    
             }
             case 1:{
@@ -80,7 +88,9 @@ ModeManage={
                this.drawGuidesLine.value=false;    
                this.selectObject.value=false;    
                this.deformCurve.value=false;     
-               this.joinCurves.value=false;      
+               this.joinCurves.value=false; 
+               this.flagDrawPlane=false; 
+               DrawPlane.visible=false;
                break;
             }
             case 2:{
@@ -89,7 +99,9 @@ ModeManage={
                this.drawGuidesLine.value=true;    
                this.selectObject.value=false;    
                this.deformCurve.value=false;
-               this.joinCurves.value=false;      
+               this.joinCurves.value=false;  
+               this.flagDrawPlane=false;
+               DrawPlane.visible=false;
                break;
             }
             case 3:{
@@ -99,6 +111,8 @@ ModeManage={
                this.selectObject.value=true;
                this.deformCurve.value=false;            
                this.joinCurves.value=false;          
+               this.flagDrawPlane=false; 
+               DrawPlane.visible=false;    
                break;    
             }
             case 4:{
@@ -107,7 +121,9 @@ ModeManage={
                this.drawGuidesLine.value=false;    
                this.selectObject.value=false;
                this.deformCurve.value=true;
-               this.joinCurves.value=false;      
+               this.joinCurves.value=false; 
+               this.flagDrawPlane=false;
+               DrawPlane.visible=false;
                break;    
             } 
             case 5:{
@@ -117,6 +133,8 @@ ModeManage={
                this.selectObject.value=false;
                this.deformCurve.value=false;
                this.joinCurves.value=true;      
+               this.flagDrawPlane=false; 
+               DrawPlane.visible=false;    
                break;    
             }    
             default: {
@@ -125,49 +143,141 @@ ModeManage={
                this.drawGuidesLine.value=false;    
                this.selectObject.value=false;     
                this.deformCurve.value=false;                
-               this.joinCurves.value=false;      
+               this.joinCurves.value=false;  
+               this.flagDrawPlane=true;
+               //DrawPlane.visible=false;
+               DrawPlane.material.opacity=0.2;    
+               setup.controls.enabled=true;
             }    
         }
+    },
+    clean:function(){
+        this.drawCurve.value=false;
+        this.drawCurve.isdrawing=false; 
+        this.drawCurve.lastPoint=new THREE.Vector3();
+        this.drawCurve.currentPoint= new THREE.Vector3();
+        dispose3(this.drawCurve.LineStroke);
+        this.drawCurve.LineStroke= new THREE.Object3D();
+        this.drawCurve.pointsStroke= [];
+        this.drawCurve.pointsStroke2D=[];
+        this.drawCurve.selected=false;
+        this.drawCurve.raycaster=new THREE.Raycaster();
+        
+        this.drawShadow.value=false;
+        this.drawShadow.isdrawing=false; 
+        this.drawShadow.lastPoint=new THREE.Vector3();
+        this.drawShadow.currentPoint= new THREE.Vector3();
+        dispose3(this.drawShadow.LineStroke);
+        this.drawShadow.LineStroke= new THREE.Object3D();
+        this.drawShadow.pointsStroke= [];
+        this.drawShadow.pointsStroke2D=[];
+        this.drawShadow.id=-1;
+        
+        this.drawGuidesLine.value=false;
+        this.drawGuidesLine.geometry= new THREE.Geometry();
+        
+        this.selectObject.value=false;
+        this.selectObject.raycaster=new THREE.Raycaster();
+        this.selectObject.listObjects=[];
+        
+        this.deformCurve.value=false;
+        this.deformCurve.isdeforming=false;
+        this.deformCurve.raycaster=new THREE.Raycaster();
+        this.deformCurve.intersected=false;
+        this.deformCurve.vertices=[];
+        this.deformCurve.curvename="";
+        this.deformCurve.handle=-1;
+        this.deformCurve.path={};
+        dispose3(this.deformCurve.pointgeometry);
+        this.deformCurve.pointgeometry = new THREE.Geometry();
+        
+        this.joinCurves.value=false;
+        this.joinCurves.isdrawing=false; 
+        this.joinCurves.lastPoint= new THREE.Vector3();
+        this.joinCurves.currentPoint= new THREE.Vector3();
+        this.joinCurves.LineStroke = new THREE.Object3D();
+        this.joinCurves.pointsStroke = [];
+        this.joinCurves.pointsStroke2D = [];
+        this.joinCurves.path={};
     }
-    
 }
 ListCurves2D={
     number:0,
-    listCP:[],
-    listObjects:[],
-    listPoints2D: [],
-    addCurve: function (points2D){
+    listCP:{},
+    listObjects:{},
+    listPoints2D:{},
+    addCurve: function (points2D,idto){
         //var obj=new CatmullRomInterpolation(51,points2D,0.6);
-        this.listObjects.push({});
-        this.listPoints2D.push(points2D);
-        this.listCP.push(getCriticalPoints(points2D));
-        this.number++;
-        return this.number-1;
+        if(idto!=undefined) var id=idto.toString();
+        else var id=this.number;
+        var t=0;
+        for(key in this.listCP){
+            if(key==id){
+                t++;
+                break;
+            }
+        }
+        if(t==0) this.number++;
+        
+        this.listObjects[id.toString()]={};
+        this.listPoints2D[id.toString()]=points2D;
+        this.listCP[id.toString()]=getCriticalPoints(points2D);
+       
+        
+        return id;
     },
     popCurve: function(){
-        this.listCP.pop();
-        this.listObjects.pop();
-        this.listPoints2D.pop();
+        var id=this.number-1;
+        var ids=id.toString();
+        delete this.listCP[ids];
+        delete this.listObjects[ids];
+        delete this.listPoints2D[ids];
+        this.number--;
+    },
+    removeCurve: function (id){
+        delete this.listCP[id.toString()];
+        delete this.listObjects[id.toString()];
+        delete this.listPoints2D[id.toString()];
         this.number--;
     }
 }
 ListCurvesShadow={
     number:0,
-    listCP:[],
-    listObjects:[],
-    listPoints2D: [],
-    addCurve: function (points2D){
+    listCP:{},
+    listObjects:{},
+    listPoints2D: {},
+    addCurve: function (points2D,idto){
         //var obj=new CatmullRomInterpolation(51,points2D,0.6);
-        this.listObjects.push({});
-        this.listPoints2D.push(points2D);
-        this.listCP.push(getCriticalPoints(points2D));
-        this.number++;
-        return this.number-1;
+        if(idto!=undefined) var id=idto.toString();
+        else var id=this.number;
+        var t=0;
+        for(key in this.listCP){
+            if(key==id){
+                t++;
+                break;
+            }
+        }
+        if(t==0) this.number++;
+        
+        this.listObjects[id.toString()]={};
+        this.listPoints2D[id.toString()]=points2D;
+        if(points2D.length<3) this.listCP[id.toString()]=[];
+        else this.listCP[id.toString()]=getCriticalPoints(points2D);
+        
+        return id;
     },
     popCurve: function(){
-        this.listCP.pop();
-        this.listObjects.pop();
-        this.listPoints2D.pop();
+        var id=this.number-1;
+        var ids=id.toString();
+        delete this.listCP[ids];
+        delete this.listObjects[ids];
+        delete this.listPoints2D[ids];
+        this.number--;
+    },
+    removeCurve: function (id){
+        delete this.listCP[id.toString()];
+        delete this.listObjects[id.toString()];
+        delete this.listPoints2D[id.toString()];
         this.number--;
     }
 }
@@ -181,7 +291,7 @@ ListCurves3D={
         if(symmetric!="")  this.list[name]=new curve3D(name,points3D,"smooth",symmetric);
         else this.list[name]=new curve3D(name,points3D,"smooth","");
         this.number++;
-        return this.number-1;
+        return parseInt(name.substring(5,name.length));
     },
     popCurve: function(){
         var id=this.number-1;
