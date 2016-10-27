@@ -89,10 +89,10 @@ function onMouseDown(){
     var event=d3.event;
     if(ModeManage.drawCurve.value){
         var short=ModeManage.drawCurve;
-        /*if(short.selected){
+        if(short.selected){
             console.log("selected mouse down");
         }
-        else{*/
+        else{
             console.log("dont selected");
             short.isdrawing = true;
             short.LineStroke = new THREE.Object3D();
@@ -102,7 +102,7 @@ function onMouseDown(){
             short.LastPoint=projectToPlane(event,DrawPlane.geometry.vertices[0].clone(),short.normalDrawPlane,false);
             short.pointsStroke.push(short.LastPoint);  
             short.pointsStroke2D.push(mouseOnScreen2D(event));      
-        //}
+        }
     }
     if(ModeManage.drawShadow.value){
         var short=ModeManage.drawShadow;
@@ -153,36 +153,38 @@ function onMouseMove() {
     var event=d3.event;
     if(ModeManage.drawCurve.value){
         var short=ModeManage.drawCurve;
-        /*var mouse=mouseNDCXY(event);
-        short.raycaster.setFromCamera(mouse,setup.camera);	
         if(short.selected){
             console.log("selected move");
         }
-        else{*/
-            console.log("dont selected");
-            /*var intersect = short.raycaster.intersectObjects([DrawPlane,InitialPlane,ReferencePlane]);
-            if(intersect.length>0){
-                var intersected=intersect[0];
-                if(intersected.object.name==="DrawPlane"){
-                    //intersected.object.material.transparent=false;
-                    intersected.object.material.opacity=0.7;
+        else{
+            //console.log("dont selected");
+            if(!short.isdrawing){
+                var mouse=mouseNDCXY(event);
+                short.raycaster.setFromCamera(mouse,setup.camera);	
+                var intersect = short.raycaster.intersectObject(DrawPlane,true);
+                if(intersect.length>0){
+                    var intersected=intersect[0];
+                    if(intersected.object.type==="Sprite"){
+                        intersected.object.material.transparent=false;
+                        intersected.object.material.opacity=1;
+                    }
+                    else{
+                        planeToDraw.spritesTransparent();
+                    }
                 }
-                else{
-                    DrawPlane.material.opacity=0.2;
-                }
+                else planeToDraw.spritesTransparent();
             }
-            else DrawPlane.material.opacity=0.2;
-            */
-            if(!short.isdrawing) return;
-            short.currentPoint=projectToPlane(event,DrawPlane.geometry.vertices[0].clone(),short.normalDrawPlane,false);
-            short.pointsStroke.push(short.currentPoint);
-            short.pointsStroke2D.push(mouseOnScreen2D(event));  
-            var geometryLine = new THREE.Geometry();
-            geometryLine.vertices.push(short.LastPoint,short.currentPoint);
-            short.LastPoint=short.currentPoint;
-            var line = new THREE.Line( geometryLine, short.materialCurve );
-            short.LineStroke.add(line);   
-       //}
+            else{
+                short.currentPoint=projectToPlane(event,DrawPlane.geometry.vertices[0].clone(),short.normalDrawPlane,false);
+                short.pointsStroke.push(short.currentPoint);
+                short.pointsStroke2D.push(mouseOnScreen2D(event));  
+                var geometryLine = new THREE.Geometry();
+                geometryLine.vertices.push(short.LastPoint,short.currentPoint);
+                short.LastPoint=short.currentPoint;
+                var line = new THREE.Line( geometryLine, short.materialCurve );
+                short.LineStroke.add(line);   
+            }
+       }
     }
     if(ModeManage.drawShadow.value){
         var short=ModeManage.drawShadow;
@@ -304,6 +306,7 @@ function onMouseUp() {
      //drawFarPlane();
     if(ModeManage.drawCurve.value){
         var short=ModeManage.drawCurve;
+        if(short.selected) short.selected=false;
         if(!ModeManage.drawCurve.isdrawing) return;
         short.isdrawing = false;
         //converting points to parametricCurve

@@ -77,6 +77,7 @@ function clear(){
             dispose3(obj);
         }
     }
+    DrawPlane.visible=false;
     ModeManage.focus();
 }
 function RenderTubes(){
@@ -132,6 +133,7 @@ function FlexibleMode(){
     if(reconstructionMode.checked) flexibleMode=false;
     else FlexibleMode=true;
 }
+var planeToDraw=new planetoDraw(DrawPlane);
 d3.select("#backButton").on("click",backFunction);
 d3.select("#deformButton").on("click",deformFunction);
 d3.select("#joinButton").on("click",joinCurveFunction);

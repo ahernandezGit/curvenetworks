@@ -335,3 +335,85 @@ curve3D.prototype.compute=function(points3D){
         this.controlpoints=[];
     }
 }
+
+//An plane to Draw over him
+
+function planetoDraw(planeObject){
+    this.object=planeObject;
+    this.normal=this.getNormal();
+    this.initialize();
+    this.updateHandles();
+}
+planetoDraw.prototype.getNormal=function(){
+    var v1 = new THREE.Vector3();
+    var v2 = new THREE.Vector3();
+    var a=this.object.geometry.vertices[0].clone();
+    var b=this.object.geometry.vertices[1].clone();
+    var c=this.object.geometry.vertices[2].clone();
+    var normal = v1.subVectors( c, b ).cross( v2.subVectors( a, b ) ).normalize();
+    return normal;
+}
+planetoDraw.prototype.updateHandles=function (){
+    //compute center of edges of the plane
+    var a=this.object.geometry.vertices[0].clone();
+    var b=this.object.geometry.vertices[1].clone();
+    var c=this.object.geometry.vertices[2].clone();
+    var d=this.object.geometry.vertices[3].clone();
+    var center=a.clone().add(b).add(c).add(d);
+    center.divideScalar(4);
+    a.sub(center);
+    b.sub(center);
+    c.sub(center);
+    d.sub(center);
+    var up=a.clone().add(b).divideScalar(2).add(center).divideScalar(2);
+    var down=c.clone().add(d).divideScalar(2).add(center).divideScalar(2);
+    var ca=[];
+    ca.push(a.clone().add(b).divideScalar(2));
+    ca.push(a.clone().add(c).divideScalar(2));
+    ca.push(b.clone().add(d).divideScalar(2));
+    ca.push(c.clone().add(d).divideScalar(2));
+    for(var i=0;i<this.spritesRotation.length;i++){
+        this.spritesRotation[i].position.copy(ca[i]);
+    }
+    this.arrowTranslate[0].position.copy(up);
+    this.arrowTranslate[1].position.copy(down);
+}
+planetoDraw.prototype.initialize=function (){
+    this.spritesRotation=[];
+    this.arrowTranslate=[];
+    var a=this.object.geometry.vertices[0].clone();
+    var b=this.object.geometry.vertices[1].clone();
+    var c=this.object.geometry.vertices[2].clone();
+    var d=this.object.geometry.vertices[3].clone();
+    var center=a.clone().add(b).add(c).add(d).divideScalar(4);
+    var up=a.clone().add(b).add(center).divideScalar(2);
+    var down=c.clone().add(d).add(center).divideScalar(2);
+    var hex = 0x27B327;
+    for(var i=0;i<4;i++){
+        //var spriteRot = makeTextSprite( "R",{ fontsize: 20, fontface: "Georgia", borderColor: {r:0, g:0, b:255, a:0.2},backgroundColor: {r:238, g:238, b:238, a:0.2} });
+        //var map = new THREE.TextureLoader().load( "images/rotate64.png" );
+        var map =new THREE.Texture(rotate64PNG);
+        map.wrapS = THREE.RepeatWrapping;
+        map.wrapT = THREE.RepeatWrapping;
+        map.needsUpdate = true;
+        var material = new THREE.SpriteMaterial( { map: map, color: 0xffffff, transparent: true, opacity: 0.3 } );
+        var spriteRot=new THREE.Sprite( material );
+        this.spritesRotation.push(spriteRot);
+        this.object.add(spriteRot);
+    }
+    for(var i=0;i<2;i++){
+        var dir = this.normal;
+        var origin = up;
+        var length = 1;
+        var arrowHelper = new THREE.ArrowHelper( dir, origin, length, hex );
+        arrowHelper.scale.set(3,3,3);
+        this.arrowTranslate.push(arrowHelper);
+        this.object.add(arrowHelper);
+    }
+}
+planetoDraw.prototype.spritesTransparent=function (){
+    for(var i=0;i<4;i++){
+        this.spritesRotation[i].material.transparent=true;
+        this.spritesRotation[i].material.opacity=0.3;
+    }
+}

@@ -90,8 +90,7 @@ var light = new THREE.AmbientLight( 0x404040,0.5 ); // soft white light
 var lighth = new THREE.HemisphereLight( 0xffffbb, 0x080820, 1 );
 
 
-function makeTextSprite( message, parameters )
-{
+function makeTextSprite( message, parameters ){
     if ( parameters === undefined ) parameters = {};
     var fontface = parameters.hasOwnProperty("fontface") ? parameters["fontface"] : "Arial";
     var fontsize = parameters.hasOwnProperty("fontsize") ? parameters["fontsize"] : 18;
@@ -102,6 +101,9 @@ function makeTextSprite( message, parameters )
 
     var canvas = document.createElement('canvas');
     var context = canvas.getContext('2d');
+    var size = 56;
+    canvas.height = size;
+    canvas.width = size;
     context.font = "Bold " + fontsize + "px " + fontface;
     var metrics = context.measureText( message );
     var textWidth = metrics.width;
@@ -120,10 +122,10 @@ function makeTextSprite( message, parameters )
 
     var spriteMaterial = new THREE.SpriteMaterial( { map: texture} );
     var sprite = new THREE.Sprite( spriteMaterial );
-    sprite.scale.set(0.5 * fontsize, 0.25 * fontsize, 0.75 * fontsize);
+    //sprite.scale.set(0.5 * fontsize, 0.25 * fontsize, 0.75 * fontsize);
+    sprite.scale.set(2,2,2);
     return sprite;  
 }
-
 // function for drawing rounded rectangles
 function roundRect(ctx, x, y, w, h, r) 
 {
@@ -141,11 +143,9 @@ function roundRect(ctx, x, y, w, h, r)
     ctx.fill();
 	ctx.stroke();   
 }
-function putLabelsToDrawPlane(){
-    
-}
-var spriteRot = makeTextSprite( "R",{ fontsize: 20, fontface: "Georgia", borderColor: {r:0, g:0, b:255, a:0.5},backgroundColor: {r:238, g:238, b:238, a:1} });
+
+/*var spriteRot = makeTextSprite( "←",{ fontsize: 20, fontface: "Georgia", borderColor: {r:0, g:0, b:255, a:0.5},backgroundColor: {r:238, g:238, b:238, a:1} });
 spriteRot.position.set(-10,0,10);
-DrawPlane.add( spriteRot );
+DrawPlane.add( spriteRot );*/
 
 
