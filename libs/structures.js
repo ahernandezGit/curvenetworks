@@ -12,7 +12,8 @@ ModeManage={
         pointsStroke : [],
         pointsStroke2D : [],
         materialCurve : new THREE.LineBasicMaterial( { color: 0x000000, linewidth: 2 } ),
-        normalDrawPlane: new THREE.Vector3()
+        normalDrawPlane: new THREE.Vector3(),
+        EulerRotation:new THREE.Euler(0,0,0,'XYZ')
     },
     drawShadow : {
         value: false, 
@@ -343,6 +344,7 @@ function planetoDraw(planeObject){
     this.normal=this.getNormal();
     this.initialize();
     this.updateHandles();
+    this.spriteSelected=-1;
 }
 planetoDraw.prototype.getNormal=function(){
     var v1 = new THREE.Vector3();
@@ -361,6 +363,7 @@ planetoDraw.prototype.updateHandles=function (){
     var d=this.object.geometry.vertices[3].clone();
     var center=a.clone().add(b).add(c).add(d);
     center.divideScalar(4);
+    this.origin=center;
     a.sub(center);
     b.sub(center);
     c.sub(center);
@@ -398,6 +401,7 @@ planetoDraw.prototype.initialize=function (){
         map.needsUpdate = true;
         var material = new THREE.SpriteMaterial( { map: map, color: 0xffffff, transparent: true, opacity: 0.3 } );
         var spriteRot=new THREE.Sprite( material );
+        spriteRot.name=i.toString();
         this.spritesRotation.push(spriteRot);
         this.object.add(spriteRot);
     }
@@ -410,10 +414,47 @@ planetoDraw.prototype.initialize=function (){
         this.arrowTranslate.push(arrowHelper);
         this.object.add(arrowHelper);
     }
+    this.origin=center;
 }
 planetoDraw.prototype.spritesTransparent=function (){
     for(var i=0;i<4;i++){
         this.spritesRotation[i].material.transparent=true;
         this.spritesRotation[i].material.opacity=0.3;
     }
+}
+planetoDraw.prototype.rotateOnSprite=function(index,angle){
+    var n=(index==0 || index==3)?0:1;
+    switch(n){
+        case 0: {
+            var axis=this.object.geometry.vertices[1].clone().sub(this.object.geometry.vertices[0]);
+            axis.normalize();
+            this.object.rotateOnAxis(axis,angle);
+            this.normal=this.getNormal();
+            break;
+        }    
+        case 1: {
+            var axis=this.object.geometry.vertices[2].clone().sub(this.object.geometry.vertices[0]);
+            axis.normalize();
+            this.object.rotateOnAxis(axis,angle);
+            this.normal=this.getNormal();
+            break;
+        }    
+    }
+    this.updateHandles();
+}
+planetoDraw.prototype.reset=function(){
+    this.object.position.set( 0, 0, 0 );
+    this.object.rotation.set( 0, 0, 0 );
+    this.object.updateMatrix();
+    this.normal=this.getNormal();
+    this.updateHandles();
+}
+planetoDraw.prototype.updateObject=function(){
+    this.object.updateMatrix(); 
+    this.object.geometry.applyMatrix( this.object.matrix );
+    this.object.matrix.identity();
+    this.object.geometry.verticesNeedUpdate = true;
+    this.object.position.set( 0, 0, 0 );
+    this.object.rotation.set( 0, 0, 0 );
+    this.object.scale.set( 1, 1, 1 );
 }

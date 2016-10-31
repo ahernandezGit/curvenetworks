@@ -78,6 +78,7 @@ function clear(){
         }
     }
     DrawPlane.visible=false;
+    planeToDraw.reset();
     ModeManage.focus();
 }
 function RenderTubes(){

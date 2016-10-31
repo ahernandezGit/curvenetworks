@@ -443,3 +443,21 @@ function getNormalDrawPlane(plane){
     var normal = v1.subVectors( c, b ).cross( v2.subVectors( a, b ) ).normalize();
     return normal;
 }
+function updateLabelRotate(angle){
+    var spriteRot=setup.scene.getObjectByName("wa");
+    if(spriteRot!="undefined"){
+        setup.scene.remove(spriteRot);
+    }
+    spriteRot = makeTextSprite(angle.toString() ,{ fontsize: 20, fontface: "Georgia", borderColor: {r:0, g:0, b:255, a:0.2},backgroundColor: {r:238, g:238, b:238, a:0.2} });
+    spriteRot.name="wa";
+    spriteRot.position.set(0,0,-11);
+    setup.scene.add(spriteRot);
+}
+function drawVector(origin,end){
+    var dir = end.clone().sub(origin);
+    var length =dir.length();
+    dir.normalize();
+    var hex = 0x088A29;
+    var arrowHelper = new THREE.ArrowHelper( dir, origin, length, hex );
+    setup.scene.add( arrowHelper );
+}

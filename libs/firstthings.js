@@ -101,7 +101,7 @@ function makeTextSprite( message, parameters ){
 
     var canvas = document.createElement('canvas');
     var context = canvas.getContext('2d');
-    var size = 56;
+    var size = 64;
     canvas.height = size;
     canvas.width = size;
     context.font = "Bold " + fontsize + "px " + fontface;
