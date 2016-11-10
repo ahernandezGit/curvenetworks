@@ -89,26 +89,31 @@ function onMouseDown(){
     var event=d3.event;
     if(ModeManage.drawCurve.value){
         var short=ModeManage.drawCurve;
-        if(short.selected){
-            console.log("selected mouse down");
-            //var index=planetoDraw.spriteSelected;
-            short.pointsStroke2D.push(mouseOnScreen2D(event)); 
-            short.isdrawing=true;
-            short.EulerRotation.copy(planeToDraw.object.rotation);
-            var normal=planeToDraw.spritesRotation[parseInt(planeToDraw.spriteSelected)].position;
-            normal.sub(planeToDraw.origin);
-            normal.cross(planeToDraw.normal);
-            var vend=project2DToPlane(short.pointsStroke2D[short.pointsStroke2D.length-1],planeToDraw.origin,normal,false);
-            drawVector(planeToDraw.origin,vend);
-            console.log(planeToDraw.normal);
+        short.isdrawing = true;
+        short.LineStroke = new THREE.Object3D();
+        short.LineStroke.name="CurrentCurve";
+        setup.scene.add(short.LineStroke);
+        short.pointsStroke2D.push(mouseOnScreen2D(event)); 
+        if(short.selected ){
+            if(planeToDraw.spriteSelected!=-1){
+                console.log("selected mouse down");
+                short.EulerRotation.copy(planeToDraw.object.rotation);
+                var normal=planeToDraw.spritesRotation[parseInt(planeToDraw.spriteSelected)].position;
+                normal.sub(planeToDraw.origin);
+                normal.cross(planeToDraw.normal);
+                short.normalDrawPlane=normal;
+                var vbegin=project2DToPlane(short.pointsStroke2D[0],planeToDraw.origin,normal,false);
+                drawVector(planeToDraw.origin,vbegin,"vbegin");
+                short.LastPoint=projectToPlane(event,planeToDraw.origin,normal,false);
+                short.pointsStroke.push(short.LastPoint); 
+            }
+            else{
+                setup.scene.remove(short.LineStroke);
+            }
         }
         else{
-            console.log("dont selected");
-            short.isdrawing = true;
-            short.LineStroke = new THREE.Object3D();
-            short.LineStroke.name="CurrentCurve";
+            //console.log("dont selected");
             short.normalDrawPlane=planeToDraw.getNormal();
-            setup.scene.add(short.LineStroke);
             short.LastPoint=projectToPlane(event,DrawPlane.geometry.vertices[0].clone(),short.normalDrawPlane,false);
             short.pointsStroke.push(short.LastPoint);  
                 
@@ -175,36 +180,54 @@ function onMouseMove() {
                     short.selected=true;
                     planeToDraw.spriteSelected=parseInt(intersected.object.name);
                 }
+                else if(intersected.object.type==="Line"){
+                    intersected.object.material.color.set(0x0101DF);
+                    short.selected=true;
+                    planeToDraw.spriteSelected=-1;
+                }
                 else{
                     planeToDraw.spritesTransparent();
                     short.selected=false;
+                    planeToDraw.spriteSelected=-2;
                 }
             }
             else{ 
                 planeToDraw.spritesTransparent();
                 short.selected=false;
+                planeToDraw.spriteSelected=-2;
             }
         }
         else{
-            if(!short.selected){
-                short.currentPoint=projectToPlane(event,DrawPlane.geometry.vertices[0].clone(),short.normalDrawPlane,false);
-                short.pointsStroke.push(short.currentPoint);
-                var geometryLine = new THREE.Geometry();
-                geometryLine.vertices.push(short.LastPoint,short.currentPoint);
-                short.LastPoint=short.currentPoint;
-                var line = new THREE.Line( geometryLine, short.materialCurve );
-                short.LineStroke.add(line);      
-            }
-            else{
-                var vend=short.pointsStroke2D[short.pointsStroke2D.length-1];
-                var vbegin=short.pointsStroke2D[0];
-                vend.sub(vbegin);
-                var angle=vend.length()*Math.PI/200;
-                var roundangle=Math.round(angle * 10) / 10;
-                
-                updateLabelRotate(roundangle);
-            }
+            short.currentPoint=projectToPlane(event,planeToDraw.origin,short.normalDrawPlane,false);
+            short.pointsStroke.push(short.currentPoint);
             short.pointsStroke2D.push(mouseOnScreen2D(event));
+            var geometryLine = new THREE.Geometry();
+            geometryLine.vertices.push(short.LastPoint,short.currentPoint);
+            short.LastPoint=short.currentPoint;
+            var line = new THREE.Line( geometryLine, short.materialCurve );
+            short.LineStroke.add(line);      
+            if(short.selected){
+                if(planeToDraw.spriteSelected!==-1){
+                    var vend=short.currentPoint.clone();
+                    var vbegin=project2DToPlane(short.pointsStroke2D[0],planeToDraw.origin,short.normalDrawPlane,false);
+                    vend.sub(planeToDraw.origin);
+                    vbegin.sub(planeToDraw.origin);
+                    var angle=vend.angleTo(vbegin);
+                    angle=angle*180/Math.PI;
+                    var roundangle=Math.round(angle * 10) / 10;
+                    updateLabelRotate(roundangle);
+                    vend.normalize().multiplyScalar(vbegin.length());
+                    var vendVector=setup.scene.getObjectByName("vend");
+                    if(vendVector!==undefined) setup.scene.remove(vendVector);
+                    drawVector(planeToDraw.origin,vend,"vend");  
+                }
+                else{
+                    var n=short.pointsStroke2D.length;
+                    var distance=(short.pointsStroke2D[n-1].x-short.pointsStroke2D[n-2].x)/10;
+                    planeToDraw.object.translateOnAxis(planeToDraw.normal,distance);
+                    planeToDraw.updateObject();
+                }
+            }
         }
     }
     if(ModeManage.drawShadow.value){
@@ -331,28 +354,32 @@ function onMouseUp() {
         short.isdrawing = false;
         if(short.selected){
             short.selected=false;
-            var normal=planeToDraw.spritesRotation[parseInt(planeToDraw.spriteSelected)].position;
-            normal.sub(planeToDraw.origin);
-            normal.cross(planeToDraw.normal);
-            normal.normalize();
-            console.log(planeToDraw.normal);
-            var vend=project2DToPlane(short.pointsStroke2D[short.pointsStroke2D.length-1],planeToDraw.origin,normal,false);
-            var vbegin=project2DToPlane(short.pointsStroke2D[0],planeToDraw.origin,normal,false);
-            var delta=vend.clone().sub(vbegin);
-            drawVector(planeToDraw.origin,vend);
-            drawVector(planeToDraw.origin,vbegin);
-            vend.sub(planeToDraw.origin);
-            vbegin.sub(planeToDraw.origin);
-            var angle=vbegin.angleTo(vend);
-            console.log("origin ",planeToDraw.origin);
-            console.log("angle ", angle*180/Math.PI);
-            console.log(delta);
-            planeToDraw.reset();
-            if(delta.x<0) planeToDraw.rotateOnSprite(planeToDraw.spriteSelected,-angle);
-            else planeToDraw.rotateOnSprite(planeToDraw.spriteSelected,angle);
-            var spriteRot=setup.scene.getObjectByName("wa");
-            if(spriteRot!="undefined"){
-                setup.scene.remove(spriteRot);
+            if(planeToDraw.spriteSelected!=-1){
+              
+                var vend=project2DToPlane(short.pointsStroke2D[short.pointsStroke2D.length-1],planeToDraw.origin,short.normalDrawPlane,false);
+                var vbegin=project2DToPlane(short.pointsStroke2D[0],planeToDraw.origin,short.normalDrawPlane,false);
+                vend.sub(planeToDraw.origin);
+                vbegin.sub(planeToDraw.origin);
+                var angle=vend.angleTo(vbegin);
+                //planeToDraw.reset();
+                var direction=short.pointsStroke2D[short.pointsStroke2D.length-1].clone().sub(short.pointsStroke2D[0]);
+                if(direction.x<0) planeToDraw.rotateOnSprite(planeToDraw.spriteSelected,-angle);
+                else planeToDraw.rotateOnSprite(planeToDraw.spriteSelected,angle);
+                //if(delta.x<0) planeToDraw.rotateOnSprite(planeToDraw.spriteSelected,angle);
+                //else planeToDraw.rotateOnSprite(planeToDraw.spriteSelected,angle);
+                var spriteRot=setup.scene.getObjectByName("wa");
+                if(spriteRot!="undefined"){
+                    setup.scene.remove(spriteRot);
+                }
+                var vendVector=setup.scene.getObjectByName("vend");
+                var vbeginVector=setup.scene.getObjectByName("vbegin");
+                if(vendVector!==undefined) setup.scene.remove(vendVector);
+                if(vbeginVector!==undefined) setup.scene.remove(vbeginVector);
+                //drawLine(planeToDraw.origin,short.normalDrawPlane.clone().multiplyScalar(2*vbegin.length()));
+                console.log(short.normalDrawPlane);
+            }
+            else{
+                planeToDraw.updateHandles();
             }
         }
         else{
@@ -370,7 +397,7 @@ function onMouseUp() {
             //setup.scene.remove(short.LineStroke);
             //dispose3(short.LineStroke);
             //drawProjectingOnPlane(short.pointsStroke);
-            short.pointsStroke=[];
+            
             //var cp=getCriticalPoints(short.pointsStroke2D);
             //var cp=ListCurves2D.listCP[idcurve];
             /*var arraycp=[];
@@ -380,10 +407,12 @@ function onMouseUp() {
             drawPoints(arraycp);
             console.log(arraycp);*/
             
-            setup.scene.remove( short.LineStroke );
-            dispose3(short.LineStroke);
+            
             //console.log("mouseup");    
         }
+        short.pointsStroke=[];
+        setup.scene.remove( short.LineStroke );
+        dispose3(short.LineStroke);
         short.pointsStroke2D=[];
     }
     if(ModeManage.drawShadow.value){
@@ -561,9 +590,14 @@ function onKeyDown(){
     var event=d3.event;
     //letter d
     if(event.keyCode == 68){
-        ModeManage.focus(0);
-        setup.controls.enabled=false;
-        removeGuides();
+        if(ModeManage.drawCurve.value){
+            planeToDraw.defaultPositions();
+        }
+        else{
+            ModeManage.focus(0);
+            setup.controls.enabled=false;
+            removeGuides();   
+        }
     }
     //letter esc
     if(event.keyCode == 27){

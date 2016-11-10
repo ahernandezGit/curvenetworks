@@ -29,7 +29,7 @@ function drawPoints(vs){
     var particle = new THREE.Points( pointGeometry, pointmaterial );
     setup.scene.add(particle);
 }
-function drawLine(p,q){
+function drawLine(p,q,name){
     var material=new THREE.LineBasicMaterial({ color: 0x04B431, linewidth: 1});
     var geometry=new THREE.Geometry();
     geometry.vertices.push(p,q);
@@ -41,6 +41,7 @@ function drawLine(p,q){
     else line = new THREE.LineSegments( geometry, material );
     line.name="lineTest";*/
     var line = new THREE.LineSegments( geometry, material );
+    if(name!==undefined) line.name=name;
     setup.scene.add(line);
 }
 //return if a number x is positive, negative or zero assuming a tolerance
@@ -453,11 +454,12 @@ function updateLabelRotate(angle){
     spriteRot.position.set(0,0,-11);
     setup.scene.add(spriteRot);
 }
-function drawVector(origin,end){
+function drawVector(origin,end,name){
     var dir = end.clone().sub(origin);
     var length =dir.length();
     dir.normalize();
     var hex = 0x088A29;
     var arrowHelper = new THREE.ArrowHelper( dir, origin, length, hex );
+    if(name!==undefined) arrowHelper.name=name;
     setup.scene.add( arrowHelper );
 }

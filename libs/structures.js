@@ -344,7 +344,7 @@ function planetoDraw(planeObject){
     this.normal=this.getNormal();
     this.initialize();
     this.updateHandles();
-    this.spriteSelected=-1;
+    this.spriteSelected=-2;
 }
 planetoDraw.prototype.getNormal=function(){
     var v1 = new THREE.Vector3();
@@ -364,10 +364,10 @@ planetoDraw.prototype.updateHandles=function (){
     var center=a.clone().add(b).add(c).add(d);
     center.divideScalar(4);
     this.origin=center;
-    a.sub(center);
+    /*a.sub(center);
     b.sub(center);
     c.sub(center);
-    d.sub(center);
+    d.sub(center);*/
     var up=a.clone().add(b).divideScalar(2).add(center).divideScalar(2);
     var down=c.clone().add(d).divideScalar(2).add(center).divideScalar(2);
     var ca=[];
@@ -380,6 +380,8 @@ planetoDraw.prototype.updateHandles=function (){
     }
     this.arrowTranslate[0].position.copy(up);
     this.arrowTranslate[1].position.copy(down);
+    this.arrowTranslate[0].setDirection(this.normal);
+    this.arrowTranslate[1].setDirection(this.normal);
 }
 planetoDraw.prototype.initialize=function (){
     this.spritesRotation=[];
@@ -421,6 +423,8 @@ planetoDraw.prototype.spritesTransparent=function (){
         this.spritesRotation[i].material.transparent=true;
         this.spritesRotation[i].material.opacity=0.3;
     }
+    this.arrowTranslate[0].children[0].material.color.set(0x27B327);
+    this.arrowTranslate[1].children[0].material.color.set(0x27B327);
 }
 planetoDraw.prototype.rotateOnSprite=function(index,angle){
     var n=(index==0 || index==3)?0:1;
@@ -429,23 +433,32 @@ planetoDraw.prototype.rotateOnSprite=function(index,angle){
             var axis=this.object.geometry.vertices[1].clone().sub(this.object.geometry.vertices[0]);
             axis.normalize();
             this.object.rotateOnAxis(axis,angle);
+            this.updateObject();
             this.normal=this.getNormal();
+            this.updateHandles();
             break;
         }    
         case 1: {
             var axis=this.object.geometry.vertices[2].clone().sub(this.object.geometry.vertices[0]);
             axis.normalize();
             this.object.rotateOnAxis(axis,angle);
+            this.updateObject();
             this.normal=this.getNormal();
+            this.updateHandles();
             break;
         }    
     }
     this.updateHandles();
 }
 planetoDraw.prototype.reset=function(){
-    this.object.position.set( 0, 0, 0 );
+    /*this.object.position.set( 0, 0, 0 );
     this.object.rotation.set( 0, 0, 0 );
-    this.object.updateMatrix();
+    this.object.updateMatrix();*/
+    this.object.geometry.vertices[0].set(-10,  0, 10 );
+    this.object.geometry.vertices[1].set(10,  0, 10 );
+    this.object.geometry.vertices[2].set(-10,  0, -10 );
+    this.object.geometry.vertices[3].set(10,  0, -10 );
+    this.object.geometry.verticesNeedUpdate = true;
     this.normal=this.getNormal();
     this.updateHandles();
 }
@@ -457,4 +470,26 @@ planetoDraw.prototype.updateObject=function(){
     this.object.position.set( 0, 0, 0 );
     this.object.rotation.set( 0, 0, 0 );
     this.object.scale.set( 1, 1, 1 );
+}
+planetoDraw.prototype.defaultPositions=function(){
+    var a=this.object.geometry.vertices[0];
+    if(a.x==-10 && a.y==0 && a.z==10){
+        this.object.geometry.vertices[0].set(0,-10, 10 );
+        this.object.geometry.vertices[1].set(0,10, 10 );
+        this.object.geometry.vertices[2].set(0,-10, -10 );
+        this.object.geometry.vertices[3].set(0,10, -10 );
+    }
+    else if(a.x==0 && a.y==-10 && a.z==10){
+        this.object.geometry.vertices[0].set(-10, 10,-5 );
+        this.object.geometry.vertices[1].set(10, 10,-5 );
+        this.object.geometry.vertices[2].set(-10, -10,-5 );
+        this.object.geometry.vertices[3].set(10, -10,-5 );
+    }
+    else{
+        this.reset();
+    }
+    this.object.geometry.verticesNeedUpdate = true;
+    //this.updateObject();
+    this.normal=this.getNormal();
+    this.updateHandles();
 }
