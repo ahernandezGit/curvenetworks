@@ -29,7 +29,7 @@ function drawPoints(vs){
     var particle = new THREE.Points( pointGeometry, pointmaterial );
     setup.scene.add(particle);
 }
-function drawLine(p,q){
+function drawLine(p,q,name){
     var material=new THREE.LineBasicMaterial({ color: 0x04B431, linewidth: 1});
     var geometry=new THREE.Geometry();
     geometry.vertices.push(p,q);
@@ -41,6 +41,7 @@ function drawLine(p,q){
     else line = new THREE.LineSegments( geometry, material );
     line.name="lineTest";*/
     var line = new THREE.LineSegments( geometry, material );
+    if(name!==undefined) line.name=name;
     setup.scene.add(line);
 }
 //return if a number x is positive, negative or zero assuming a tolerance
@@ -107,14 +108,7 @@ function laplacianSmooth(curve){
         curve[i].add(displacement);
     }
 }
-function searchIntersectedObject(name){
-    for(key in ListIntersectionObjects){
-        if(key==name){
-            return true;
-        }
-    }
-    return false;
-}
+
 //convert a geometry.vertices of a curve type LineSegments to a geometry.vertices like in THREE.Line  
 //note that LineSegments repeat point
 function LineSegmentToLineGeometry(geovert){
@@ -283,33 +277,25 @@ function removeCurveFromScene(id){
     }
 }
 function symmetrize(){
-    var n=0;
-    var index=[];
-    for(key in ListIntersectionObjects){
-        if(ListIntersectionObjects[key].type=="LineSegments"){
-            n++;
-            index.push(ListIntersectionObjects[key].name);
-        }
-        if(ListIntersectionObjects[key].type=="Mesh" && ListIntersectionObjects[key].name.startsWith("TubeCurve")){
-            n++;
-            index.push(ListIntersectionObjects[key].name);
-        }
-    }
+    var n=ListIntersectionObjects.n;
+    console.log(n);
     if(n==1){
-        if(index[0].startsWith("Tube")){
-           var tubecurve=setup.scene.getObjectByName(index[0]); 
-           delete ListIntersectionObjects[index[0]];
+        console.log("entrou 1");
+        var name=ListIntersectionObjects.name["0"];
+        if(name.startsWith("Tube")){
+           var tubecurve=setup.scene.getObjectByName(name); 
+           ListIntersectionObjects.remove(name);
            tubecurve.material=materialTubeGeometry;    
-           index[0]=index[0].substring(4,index[0].length);
+           name=name.substring(4,name.length);
         } 
-        var curve=setup.scene.getObjectByName(index[0]); 
+        var curve=setup.scene.getObjectByName(name); 
         if(isXequalsign(curve.geometry.vertices)){
             var geo=mirrorOnPlaneYZ(curve.geometry);
             var id=getAvailableIndex3DCurves();
-            addCurve3D(geo,"",index[0],id);
+            addCurve3D(geo,"",name,id);
             curve.material.linewidth=3;
             curve.material.opacity=1;    
-            delete ListIntersectionObjects[index[0]];
+            ListIntersectionObjects.remove(name);
         } 
         else{
             var array=mirrorOnPlaneYZ(curve.geometry);
@@ -379,14 +365,13 @@ function symmetrize(){
             for(var j=0;j<geometry.vertices.length-1;j++){
                 linegeometry.vertices.push(geometry.vertices[j],geometry.vertices[j+1]);
             }
-            removeCurveFromScene(parseInt(index[0].substring(5,index[0].length)));
-            addCurve3D([linegeometry,geometry.vertices],"","",parseInt(index[0].substring(5,index[0].length)));
-            
+            removeCurveFromScene(parseInt(name.substring(5,name.length)));
+            addCurve3D([linegeometry,geometry.vertices],"","",parseInt(name.substring(5,name.length)));
+            ListIntersectionObjects.remove(name);
         }
-        delete ListIntersectionObjects[index[0]];
         ReferencePlane.material.transparent=true;
         ReferencePlane.material.opacity=0.5;    
-        delete ListIntersectionObjects["ReferencePlane"];
+        ListIntersectionObjects.remove("ReferencePlane");
     }
     if(n==2){
         
@@ -453,11 +438,12 @@ function updateLabelRotate(angle){
     spriteRot.position.set(0,0,-11);
     setup.scene.add(spriteRot);
 }
-function drawVector(origin,end){
+function drawVector(origin,end,name){
     var dir = end.clone().sub(origin);
     var length =dir.length();
     dir.normalize();
     var hex = 0x088A29;
     var arrowHelper = new THREE.ArrowHelper( dir, origin, length, hex );
+    if(name!==undefined) arrowHelper.name=name;
     setup.scene.add( arrowHelper );
 }

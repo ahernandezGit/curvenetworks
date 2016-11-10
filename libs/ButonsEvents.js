@@ -24,7 +24,8 @@ function backFunction(){
             //ListCurves2D.listObjects[nc-1].draw("curve2d");
         }
         else{
-            removeCurveFromScene(ns-1);
+            var last=getAvailableIndex3DCurves();
+            removeCurveFromScene(last-1);
         }
         console.log("back after");
         console.log("curves ", ListCurves2D.number, " shadow ",ListCurvesShadow.number);    
@@ -135,9 +136,28 @@ function FlexibleMode(){
     else FlexibleMode=true;
 }
 var planeToDraw=new planetoDraw(DrawPlane);
+function ShowDrawPlane(){
+    var dpobj=document.getElementById("checkDP");
+    if(dpobj.checked) DrawPlane.visible=true;
+    else DrawPlane.visible=false;
+}
+function deleteObject(){
+    if(ListIntersectionObjects.n>0){
+        for (var key in ListIntersectionObjects.list) {
+            var name=key;
+            console.log(name);
+            ListIntersectionObjects.remove(name);
+            if(name.startsWith("TubeCurve")) var id=name.substring(9,name.length);
+            else if(name.startsWith("Curve")) var id=name.substring(5,name.length);
+            removeCurveFromScene(parseInt(id));
+        }
+    }
+}
 d3.select("#backButton").on("click",backFunction);
 d3.select("#deformButton").on("click",deformFunction);
 d3.select("#joinButton").on("click",joinCurveFunction);
+d3.select("#delButton").on("click",deleteObject);
 d3.select("#clearButton").on("click",clear);
 d3.select("#checkRender").on("click",RenderTubes);
 d3.select("#checkShadow").on("click",RenderShadows);
+d3.select("#checkDP").on("click",ShowDrawPlane);

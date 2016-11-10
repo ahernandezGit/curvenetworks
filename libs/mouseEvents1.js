@@ -1,32 +1,32 @@
 function onMouseClick(){
-    if(ModeManage.selectObject.value ){
+    if(ModeManage.selectObject.value){
         var intersects = ModeManage.selectObject.raycaster.intersectObjects(setup.scene.children);
         //console.log(intersects);
         if(intersects.length>0){
             var intersected=intersects[0];
-            //console.log(intersects);
+            console.log(intersects);
             if(intersected.object.type=="Mesh" && intersected.object.name=="ReferencePlane"){
-                if(ListIntersectionObjects.search("ReferencePlane")){
+                if(searchIntersectedObject("ReferencePlane")){
                     intersected.object.material.transparent=true;
                     intersected.object.material.opacity=0.5;    
-                    ListIntersectionObjects.remove("ReferencePlane");
+                    delete ListIntersectionObjects["ReferencePlane"];
                 }
                 else{
                     intersected.object.material.transparent=false;
                     intersected.object.material.opacity=1;    
+                    ListIntersectionObjects["ReferencePlane"]=new IntersectionObject("ReferencePlane","Mesh"); 
                     symmetrize();
-                    ListIntersectionObjects.add("ReferencePlane","Mesh"); 
                 }
             }
             else if(intersected.object.type=="Mesh" && intersected.object.name.startsWith("TubeCurve")){
                 var name=intersected.object.name;
-                if(ListIntersectionObjects.search(name)){
+                if(searchIntersectedObject(name)){
                     /*intersected.object.material.color.set(0x996633);
                     intersected.object.material.emissive.set(0x000000);
                     intersected.object.material.especular=0xe8b53b;
                     intersected.object.material.shading=THREE.SmoothShading;*/
                     intersected.object.material=materialTubeGeometry;
-                    ListIntersectionObjects.remove(name);
+                    delete ListIntersectionObjects[name];
                     var perfilshadow=setup.scene.getObjectByName("PerfilCurve");
                     if(perfilshadow!=undefined){
                         setup.scene.remove(perfilshadow);
@@ -39,7 +39,7 @@ function onMouseClick(){
                     intersected.object.material.especular=0x0f0d0d;
                     intersected.object.material.shading=THREE.FlatShading;*/
                     intersected.object.material=materialTubeGeometrySelected;
-                    ListIntersectionObjects.add(name,"Mesh");
+                    ListIntersectionObjects[name]=new IntersectionObject(name,"Mesh");
                     var perfilshadow=setup.scene.getObjectByName("PerfilCurve");
                     if(perfilshadow!=undefined){
                         setup.scene.remove(perfilshadow);
@@ -49,16 +49,16 @@ function onMouseClick(){
             }
             else if(intersected.object.type=="LineSegments"){
                 var name=intersected.object.name;
-                if(ListIntersectionObjects.search(name)){
+                if(searchIntersectedObject(name)){
                     if(name.startWith("shadow")) intersected.object.material.linewidth=1;
                     else intersected.object.material.linewidth=3;
                     intersected.object.material.opacity=1;    
-                    ListIntersectionObjects.remove(name);
+                    delete ListIntersectionObjects[name];
                 }
                 else{
                     intersected.object.material.linewidth=6;
                     intersected.object.material.opacity=0.5;    
-                    ListIntersectionObjects.add(name,"LineSegments");   
+                    ListIntersectionObjects[name]=new IntersectionObject(name,"LineSegments");   
                 }
             }
         }
@@ -166,7 +166,6 @@ function onMouseDown(){
 
 function onMouseMove() {
     var event=d3.event;
-   
     if(ModeManage.drawCurve.value){
         var short=ModeManage.drawCurve;
         if(!short.isdrawing){
@@ -261,10 +260,9 @@ function onMouseMove() {
     if(ModeManage.selectObject.value){
         var mouse=mouseNDCXY(event);
         ModeManage.selectObject.raycaster.setFromCamera(mouse,setup.camera);	
-        ModeManage.selectObject.raycaster.linePrecision=0.2;    
+        ModeManage.selectObject.raycaster.linePrecision=0.1;    
         var intersects = ModeManage.selectObject.raycaster.intersectObjects(setup.scene.children);
         if(intersects.length>0){
-            setup.controls.enabled=false;
             var intersected=intersects[0];
             if(intersected.object.type=="Mesh" && intersected.object.name.startsWith("TubeCurve")){
                 var pathLineGeometry=new THREE.Geometry();
@@ -283,7 +281,6 @@ function onMouseMove() {
                 }
             }
             else{
-                setup.controls.enabled=true;
                 var perfilshadow=setup.scene.getObjectByName("PerfilCurve");
                 if(perfilshadow!=undefined){
                     setup.scene.remove(perfilshadow);
@@ -292,7 +289,6 @@ function onMouseMove() {
             }
         }
         else{
-                setup.controls.enabled=true;
                 var perfilshadow=setup.scene.getObjectByName("PerfilCurve");
                 if(perfilshadow!=undefined){
                     setup.scene.remove(perfilshadow);
@@ -605,8 +601,26 @@ function onKeyDown(){
     }
     //letter esc
     if(event.keyCode == 27){
-        ModeManage.focus(3);
-        removeGuides();
+        var existsSelectedObject=false;
+        for (var key in ListIntersectionObjects) {
+            if (ListIntersectionObjects.hasOwnProperty(key)){
+              existsSelectedObject=true;
+              break;
+            } 
+        }
+        if(existsSelectedObject){
+            for (var key in ListIntersectionObjects) {
+                var name=ListIntersectionObjects[key].name;
+                delete ListIntersectionObjects[name];
+                if(name.startsWith("TubeCurve")) var id=name.substring(9,name.length);
+                else if(name.startsWith("Curve")) var id=name.substring(5,name.length);
+                removeCurveFromScene(parseInt(id));
+            }
+        }
+        else{
+            ModeManage.focus();
+            removeGuides();
+        }
     }
     //letter s
     if(event.keyCode == 83){
