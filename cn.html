@@ -30,18 +30,20 @@
     <script src="libs/CatmullRom2D.js"></script>    
     <script src="libs/3DCurveDeform.js"></script>        
     <script src="libs/circlefit.js"></script>        
-          
+    <script src="libs/commandmanager.js"></script>              
     <script  type="application/x-javascript" src="libs/lalolib/lalolib.js"></script>
 	</head>
 	<body>
         <div class="overcanvas"><br> 
             <label><input type="checkbox" id="checkRender" checked>Tube Render </label><br/>  
-            <label><input type="checkbox" id="checkShadow" checked>Show Shadow </label><br/><br/>  
+            <label><input type="checkbox" id="checkShadow" checked>Show Shadow </label><br/> 
+            <label><input type="checkbox" id="checkDP" checked>Show DrawPlane </label><br/><br/>  
             <label><input type="checkbox" id="checkMode" checked>Flexible Mode </label><br/><br/>  
             <button id="backButton">Back</button><br>
             <button id="deformButton">Deform</button><br>
             <button id="joinButton">Join</button><br>
             <button id="clearButton">Clear</button><br>
+            <button id="delButton">Delete</button><br>
         </div>    
         <script>
             var setup = new ThreeSetup();
