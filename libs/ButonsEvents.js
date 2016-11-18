@@ -80,7 +80,7 @@ function clear(){
     }
     DrawPlane.visible=false;
     planeToDraw.reset();
-    ModeManage.focus();
+    ModeManage.focus(3);
 }
 function RenderTubes(){
     var tuberender=document.getElementById("checkRender");

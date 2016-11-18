@@ -97,7 +97,6 @@ function onMouseDown(){
         if(short.selected ){
             if(planeToDraw.spriteSelected!=-1){
                 console.log("selected mouse down");
-                short.EulerRotation.copy(planeToDraw.object.rotation);
                 var normal=planeToDraw.spritesRotation[parseInt(planeToDraw.spriteSelected)].position;
                 normal.sub(planeToDraw.origin);
                 normal.cross(planeToDraw.normal);
@@ -118,6 +117,16 @@ function onMouseDown(){
             short.pointsStroke.push(short.LastPoint);  
                 
         }
+    }
+    if(ModeManage.drawFree.value){
+        var short=ModeManage.drawFree;
+        short.isdrawing = true;
+        short.LineStroke = new THREE.Object3D();
+        short.LineStroke.name="CurrentCurve";
+        setup.scene.add(short.LineStroke);
+        short.pointsStroke2D.push(mouseOnScreen2D(event)); 
+        short.LastPoint=projectToFarPlane(event);
+        short.pointsStroke.push(short.LastPoint);  
     }
     if(ModeManage.drawShadow.value){
         var short=ModeManage.drawShadow;
@@ -230,6 +239,18 @@ function onMouseMove() {
                 }
             }
         }
+    }
+    if(ModeManage.drawFree.value){
+        var short=ModeManage.drawFree;
+        if(!short.isdrawing) return;
+        short.currentPoint=projectToFarPlane(event);
+        short.pointsStroke.push(short.currentPoint);
+        short.pointsStroke2D.push(mouseOnScreen2D(event));
+        var geometryLine = new THREE.Geometry();
+        geometryLine.vertices.push(short.LastPoint,short.currentPoint);
+        short.LastPoint=short.currentPoint;
+        var line = new THREE.Line( geometryLine, short.materialCurve );
+        short.LineStroke.add(line);      
     }
     if(ModeManage.drawShadow.value){
         var short=ModeManage.drawShadow;
@@ -419,6 +440,29 @@ function onMouseUp() {
         dispose3(short.LineStroke);
         short.pointsStroke2D=[];
     }
+    if(ModeManage.drawFree.value){
+        var short=ModeManage.drawFree;
+        if(!short.isdrawing) return;
+        short.isdrawing = false;
+        var n=short.pointsStroke2D.length;
+        var ranking40=short.getRanking2D(short.pointsStroke2D[0]);
+        var ranking41=short.getRanking2D(short.pointsStroke2D[n-1]);
+        var weights0=ranking40[0];
+        var weights1=ranking41[0];
+        console.log(ranking40[2]);
+        console.log(ranking41[2]);
+        //evalFunction(weights0);
+        //evalFunction(weights1);
+        var p0=average3(weights0.slice(0,2),ranking40[1].slice(0,2));
+        var p1=average3(weights1.slice(0,2),ranking41[1].slice(0,2));
+        console.log(p0);
+        console.log(p1);
+        drawPoints([p0,p1]);
+        short.pointsStroke=[];
+        setup.scene.remove( short.LineStroke );
+        dispose3(short.LineStroke);
+        short.pointsStroke2D=[];
+    }
     if(ModeManage.drawShadow.value){
         var short=ModeManage.drawShadow;
         ModeManage.drawGuidesLine.value=false;
@@ -593,7 +637,12 @@ function onMouseUp() {
 function onKeyDown(){
     var event=d3.event;
     //letter d
-    if(event.keyCode == 68){
+    if(event.keyCode == 68 && event.shiftKey){
+        console.log("ctrl d");
+        ModeManage.focus(6);
+        setup.controls.enabled=false;
+    }
+    else if(event.keyCode == 68){
         if(ModeManage.drawCurve.value){
             planeToDraw.defaultPositions();
         }
@@ -620,23 +669,18 @@ function onKeyDown(){
         cross.name="GuideLines";
         setup.scene.add(cross);
         // select first shadowcurve
-        for(key in ListIntersectionObjects){
+        for(key in ListIntersectionObjects.list){
             if(key.startsWith("shadow")) {
                 ModeManage.drawShadow.id=parseInt(key.substring(13,key.length));
                 break;
             }
         }
     }
+    
     //ctrl+z
     //letter z is 90
     if(event.keyCode == 90 && event.ctrlKey){
         backFunction();
-    }
-    //letter p
-    if(event.keyCode == 80){
-        ModeManage.focus(3);
-        setup.controls.enabled=false; 
-        removeGuides();
     }
 }
 

@@ -1,6 +1,35 @@
 var ModeManage= ModeManage || {};
 ModeManage={
     flagDrawPlane:true,
+    drawFree:{
+        getRanking2D:function(point){
+           var corners2D=[];
+           var distances=[];    
+           var result1=[];
+           var result2=[]; 
+           var result3=[];    
+           for(var i=0;i<4;i++){
+               corners2D.push(threeDToScreenSpace(InitialPlane.geometry.vertices[i]));
+               distances.push([point.distanceToSquared(corners2D[i]),i]);
+           }
+           distances.sort(function(a, b){return a[0]-b[0]});
+           //console.log(distances);    
+           for(var i=0;i<4;i++){
+               result1.push(distances[i][0]);
+               result2.push(InitialPlane.geometry.vertices[distances[i][1]]);
+               result3.push(distances[i][1]);
+           }
+           return [result1,result2,result3];    
+        },
+        value: false, 
+        isdrawing:false,
+        lastPoint: new THREE.Vector3(),
+        currentPoint: new THREE.Vector3(),
+        LineStroke : new THREE.Object3D(),
+        pointsStroke : [],
+        pointsStroke2D : [],
+        materialCurve : new THREE.LineBasicMaterial( { color: 0x000000, linewidth: 2 } )
+    },
     drawCurve : { 
         value: false, 
         isdrawing:false, 
@@ -12,8 +41,7 @@ ModeManage={
         pointsStroke : [],
         pointsStroke2D : [],
         materialCurve : new THREE.LineBasicMaterial( { color: 0x000000, linewidth: 2 } ),
-        normalDrawPlane: new THREE.Vector3(),
-        EulerRotation:new THREE.Euler(0,0,0,'XYZ')
+        normalDrawPlane: new THREE.Vector3()
     },
     drawShadow : {
         value: false, 
@@ -72,6 +100,7 @@ ModeManage={
     focus:function(n) {
         switch(n){
             case 0:{
+               this.drawFree.value=false;    
                this.drawCurve.value=true;
                this.drawShadow.value=false;
                this.drawGuidesLine.value=false;    
@@ -84,6 +113,7 @@ ModeManage={
                break;    
             }
             case 1:{
+               this.drawFree.value=false;    
                this.drawCurve.value=false;
                this.drawShadow.value=true;
                this.drawGuidesLine.value=false;    
@@ -95,6 +125,7 @@ ModeManage={
                break;
             }
             case 2:{
+               this.drawFree.value=false;    
                this.drawCurve.value=false;
                this.drawShadow.value=false;
                this.drawGuidesLine.value=true;    
@@ -106,6 +137,7 @@ ModeManage={
                break;
             }
             case 3:{
+               this.drawFree.value=false;    
                this.drawCurve.value=false;
                this.drawShadow.value=false;
                this.drawGuidesLine.value=false;    
@@ -113,10 +145,12 @@ ModeManage={
                this.deformCurve.value=false;            
                this.joinCurves.value=false;          
                this.flagDrawPlane=false; 
-               DrawPlane.visible=false;    
+               DrawPlane.visible=false; 
+               setup.controls.enabled=true;
                break;    
             }
             case 4:{
+               this.drawFree.value=false;
                this.drawCurve.value=false;
                this.drawShadow.value=false;
                this.drawGuidesLine.value=false;    
@@ -128,6 +162,7 @@ ModeManage={
                break;    
             } 
             case 5:{
+               this.drawFree.value=false; 
                this.drawCurve.value=false;
                this.drawShadow.value=false;
                this.drawGuidesLine.value=false;    
@@ -137,8 +172,21 @@ ModeManage={
                this.flagDrawPlane=false; 
                DrawPlane.visible=false;    
                break;    
+            }  
+            case 6:{
+               this.drawFree.value=true; 
+               this.drawCurve.value=false;
+               this.drawShadow.value=false;
+               this.drawGuidesLine.value=false;    
+               this.selectObject.value=false;
+               this.deformCurve.value=false;
+               this.joinCurves.value=false;      
+               this.flagDrawPlane=false; 
+               DrawPlane.visible=false;    
+               break;
             }    
             default: {
+               this.drawFree.value=false; 
                this.drawCurve.value=false;
                this.drawShadow.value=false;
                this.drawGuidesLine.value=false;    
@@ -200,6 +248,9 @@ ModeManage={
         this.joinCurves.pointsStroke = [];
         this.joinCurves.pointsStroke2D = [];
         this.joinCurves.path={};
+        
+        this.drawFree.value=false;
+        this.drawFree.isdrawing=false;
     }
 }
 ListCurves2D={

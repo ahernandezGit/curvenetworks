@@ -19,14 +19,12 @@ function drawPoints(vs){
     for(var i=0;i<n;i++){
         pointGeometry.vertices.push(vs[i]);   
     }
-    /*var particle=setup.scene.getObjectByName("pointsTest");
-    if(particle!=undefined){
+    var particle=setup.scene.getObjectByName("pointsTest");
+    if(particle!==undefined){
         setup.scene.remove(particle);
-        particle = new THREE.Points( pointGeometry, pointmaterial );
     }
-    else particle = new THREE.Points( pointGeometry, pointmaterial );
-    particle.name="pointsTest";*/
-    var particle = new THREE.Points( pointGeometry, pointmaterial );
+    particle = new THREE.Points( pointGeometry, pointmaterial );
+    particle.name="pointsTest";
     setup.scene.add(particle);
 }
 function drawLine(p,q,name){
@@ -446,4 +444,35 @@ function drawVector(origin,end,name){
     var arrowHelper = new THREE.ArrowHelper( dir, origin, length, hex );
     if(name!==undefined) arrowHelper.name=name;
     setup.scene.add( arrowHelper );
+}
+
+// average list of THREE.Vector3 with weights
+function average3(weight,vectors){
+    var result=new THREE.Vector3();
+    var total=0;
+    var total2=0;
+    var n=vectors.length;
+    var m=weight.length;
+    if(n!=m) return;
+    else{
+        for(var i=0;i<n;i++){
+            //result.add(vectors[i].multiplyScalar(weight[i]));
+            total=total+weight[i];
+        }
+        for(var i=0;i<n;i++){
+            weight[i]=weight[i]/total;   
+            //weight[i]=Math.exp(-weight[i]);
+            result.add(vectors[i].clone().multiplyScalar(weight[i]));
+            //total2=total2+weight[i];
+        }
+        //result.divideScalar(total2); 
+        console.log(weight);
+        return result;
+    }
+}
+function evalFunction(array){
+    var n=array.length;
+    for(var i=0;i<n;i++){
+        array[i]=Math.exp(-Math.sqrt(array[i]));
+    }
 }
