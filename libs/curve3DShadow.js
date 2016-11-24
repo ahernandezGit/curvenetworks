@@ -145,6 +145,21 @@ function reconstructProjectOnNormalDirection(p,points){
     }
     return [geometry,vertices];
 }
+//To fix a problem at execute UNDO method when we modificate shadow of a existing curve  
+function getListShadowObject(id,startCurve2DPoint){
+    var shadow=ListCurvesShadow.listPoints2D[id.toString()];
+    var is=ListCurvesShadow.listCP[id.toString()];
+    var dist=imageSpaceAligned(shadow[0],Position3D(shadow[0]),startCurve2DPoint);
+    //var dist=shadow[0].distanceTo(startCurve2DPoint);
+    if(Math.abs(dist)<25){
+        ListCurvesShadow.listObjects[id.toString()]=new CatmullRomInterpolation(51,shadow,0.6);
+    }
+    else{
+        mirrorIndexArray(is,shadow.length);
+        shadow.reverse();
+        ListCurvesShadow.listObjects[id.toString()]=new CatmullRomInterpolation(51,shadow,0.6);
+    }
+}
 function matchCriticalPoints(id,ListCurve,ListShadow){
     //match begin of the curve and shadow
     var shadow=ListShadow.listPoints2D[id.toString()];

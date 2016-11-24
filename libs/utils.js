@@ -69,6 +69,15 @@ function drawProjectingOnPlane(curve,id){
     line.name="shadowOfCurve"+id.toString();
     setup.scene.add(line);
 }
+function getShadow2DFrom3D(curve){
+    var n=curve.length;
+    var result=[];
+    for(var i=0;i<n;i++){
+        result.push(curve[i].clone());
+        result[i].setZ(0);
+    }
+    return worldTo2D(result);
+}
 function draw2DCurveOnFarPlane(curve,id){
     var material=ModeManage.drawCurve.materialCurve;
     var geometry=new THREE.Geometry();
@@ -274,26 +283,48 @@ function removeCurveFromScene(id){
         dispose3(ShadowReconstructed);
     }
 }
+function removeCurve3DFromScene(id){
+    var name="Curve"+id.toString();
+    var reconstructed=setup.scene.getObjectByName(name);
+    var TubeReconstructed=setup.scene.getObjectByName("Tube"+name);
+    var ShadowReconstructed=setup.scene.getObjectByName("shadowOfCurve"+id.toString());
+    if(reconstructed!= undefined){ 
+        ListCurves3D.removeCurve(name);
+        setup.scene.remove(reconstructed);
+        dispose3(reconstructed);
+    }
+    if(TubeReconstructed!=undefined){
+        setup.scene.remove(TubeReconstructed);
+        dispose3(TubeReconstructed);
+    }
+    if(ShadowReconstructed!=undefined){
+        setup.scene.remove(ShadowReconstructed);
+        dispose3(ShadowReconstructed);
+    }
+}
 function symmetrize(){
     var n=ListIntersectionObjects.n;
     console.log(n);
     if(n==1){
         console.log("entrou 1");
-        var name=ListIntersectionObjects.name["0"];
+        var name=Object.keys(ListIntersectionObjects.list)[0];
+        //var name=ListIntersectionObjects.name["0"];
+        var copyname=name;
         if(name.startsWith("Tube")){
            var tubecurve=setup.scene.getObjectByName(name); 
-           ListIntersectionObjects.remove(name);
+           
            tubecurve.material=materialTubeGeometry;    
            name=name.substring(4,name.length);
         } 
+        ListIntersectionObjects.remove(copyname);
         var curve=setup.scene.getObjectByName(name); 
         if(isXequalsign(curve.geometry.vertices)){
             var geo=mirrorOnPlaneYZ(curve.geometry);
-            var id=getAvailableIndex3DCurves();
+            var id=ListCurves3D.getAvailableIndex();
             addCurve3D(geo,"",name,id);
             curve.material.linewidth=3;
             curve.material.opacity=1;    
-            ListIntersectionObjects.remove(name);
+            //ListIntersectionObjects.remove(name);
         } 
         else{
             var array=mirrorOnPlaneYZ(curve.geometry);
@@ -365,11 +396,13 @@ function symmetrize(){
             }
             removeCurveFromScene(parseInt(name.substring(5,name.length)));
             addCurve3D([linegeometry,geometry.vertices],"","",parseInt(name.substring(5,name.length)));
-            ListIntersectionObjects.remove(name);
+            //ListIntersectionObjects.remove(name);
         }
-        ReferencePlane.material.transparent=true;
-        ReferencePlane.material.opacity=0.5;    
-        ListIntersectionObjects.remove("ReferencePlane");
+        if(ListIntersectionObjects.search("ReferencePlane"))   ListIntersectionObjects.remove("ReferencePlane");
+        if(!ReferencePlane.material.transparent){
+            ReferencePlane.material.transparent=true;
+            ReferencePlane.material.opacity=0.5;    
+        }
     }
     if(n==2){
         
@@ -475,4 +508,93 @@ function evalFunction(array){
     for(var i=0;i<n;i++){
         array[i]=Math.exp(-Math.sqrt(array[i]));
     }
+}
+function shadow2DarrayToPlane(points2D,point,normal){
+    var n=points2D.length;
+    var result=[];
+    for(var i=0;i<n;i++){
+        var projected=project2DToPlane(points2D[i],point,normal);
+        result.push(new THREE.Vector3(projected.x,projected.y,0));
+    }
+    return result;
+}
+function project2DarrayToPlane(points2D,point,normal){
+    var n=points2D.length;
+    var result=[];
+    for(var i=0;i<n;i++){
+        var projected=project2DToPlane(points2D[i],point,normal);
+        result.push(projected);
+    }
+    return result;
+}
+function worldTo2D(points){
+    var n=points.length;
+    var result=[];
+    for(var i=0;i<n;i++){
+        result.push(threeDToScreenSpace(points[i]));
+    }
+    return result;
+}
+function averageShadows(perfil1,perfil2){
+    var n=perfil1.length;
+    var m=perfil2.length;
+    var result=[];
+    if(n!=m) return;
+    else{
+        for(var i=0;i<n;i++){
+            var average=perfil1[i].clone().add(perfil2[i]);
+            average.divideScalar(2);
+            result.push(average);
+        }
+        return result;
+    }
+}
+function averageShadowsIndexes(indexes,perfil1,perfil2){
+    var n=perfil1.length;
+    var m=perfil2.length;
+    var result=[];
+    if(n!=m) return;
+    else{
+        for(var i=0;i<n;i++){
+            if(indexes.indexOf(i)!=-1){
+                var average=perfil1[i].clone().add(perfil2[i]);
+                average.divideScalar(2);
+                result.push(average);    
+            }
+            else{
+                result.push(perfil1[i]);
+            }
+        }
+        return result;
+    }
+}
+
+function getIndexOutPlane(points){
+    var n=points.length;
+    var result=[];
+    for(var i=0;i<n;i++){
+        if(points[i].x>-10 && points[i].y>-15 && points[i].x<10 && points[i].y<15){
+            continue;
+        }
+        else{
+            result.push(i);
+        }
+    }
+    return result;
+}
+
+
+//Point-In-Polygon Algorithm: From http://alienryderflex.com/polygon/
+function isInPolygon2(P,v){
+var  i, j=P.length-1;
+var  oddNodes=false;
+for (i=0; i<P.length; i++) {
+    if (( P[i].y< v.y && P[j].y>=v.y || P[j].y< v.y && P[i].y>=v.y) &&  (P[i].x<=v.x || P[j].x <=v.x)) {
+        if (P[i].x+(v.y-P[i].y)/(P[j].y-P[i].y)*(P[j].x-P[i].x)<v.x){
+           oddNodes=!oddNodes;    
+        }
+    }
+    j=i; 
+}
+    return oddNodes; 
 }

@@ -80,6 +80,7 @@ ModeManage={
         raycaster:new THREE.Raycaster(),
         intersected:false,
         vertices:[],
+        copyVertices:[],
         curvename:"",
         handle:-1,
         path:{},
@@ -205,12 +206,12 @@ ModeManage={
         this.drawCurve.isdrawing=false; 
         this.drawCurve.lastPoint=new THREE.Vector3();
         this.drawCurve.currentPoint= new THREE.Vector3();
-        dispose3(this.drawCurve.LineStroke);
         this.drawCurve.LineStroke= new THREE.Object3D();
         this.drawCurve.pointsStroke= [];
         this.drawCurve.pointsStroke2D=[];
         this.drawCurve.selected=false;
         this.drawCurve.raycaster=new THREE.Raycaster();
+        
         
         this.drawShadow.value=false;
         this.drawShadow.isdrawing=false; 
@@ -234,6 +235,7 @@ ModeManage={
         this.deformCurve.raycaster=new THREE.Raycaster();
         this.deformCurve.intersected=false;
         this.deformCurve.vertices=[];
+        this.deformCurve.copyVertices=[];
         this.deformCurve.curvename="";
         this.deformCurve.handle=-1;
         this.deformCurve.path={};
@@ -251,6 +253,11 @@ ModeManage={
         
         this.drawFree.value=false;
         this.drawFree.isdrawing=false;
+        this.drawFree.lastPoint= new THREE.Vector3();
+        this.drawFree.currentPoint= new THREE.Vector3();
+        this.drawFree.LineStroke = new THREE.Object3D();
+        this.drawFree.pointsStroke = [];
+        this.drawFree.pointsStroke2D = [];
     }
 }
 ListCurves2D={
@@ -261,9 +268,9 @@ ListCurves2D={
     addCurve: function (points2D,idto){
         //var obj=new CatmullRomInterpolation(51,points2D,0.6);
         if(idto!=undefined) var id=idto.toString();
-        else var id=this.number;
+        else var id=this.number.toString();
         var t=0;
-        for(key in this.listCP){
+        for(var key in this.listCP){
             if(key==id){
                 t++;
                 break;
@@ -274,7 +281,6 @@ ListCurves2D={
         this.listObjects[id.toString()]={};
         this.listPoints2D[id.toString()]=points2D;
         this.listCP[id.toString()]=getCriticalPoints(points2D);
-       
         
         return id;
     },
@@ -298,25 +304,32 @@ ListCurvesShadow={
     listCP:{},
     listObjects:{},
     listPoints2D: {},
+    listResidualShadows:{},
     addCurve: function (points2D,idto){
         //var obj=new CatmullRomInterpolation(51,points2D,0.6);
         if(idto!=undefined) var id=idto.toString();
-        else var id=this.number;
+        else var id=this.number.toString();
         var t=0;
-        for(key in this.listCP){
+        for(var key in this.listCP){
             if(key==id){
                 t++;
                 break;
             }
         }
-        if(t==0) this.number++;
-        
+        if(t==0){
+            this.number++;
+            this.listResidualShadows[id.toString()]=[];
+        }
         this.listObjects[id.toString()]={};
         this.listPoints2D[id.toString()]=points2D;
         if(points2D.length<3) this.listCP[id.toString()]=[];
         else this.listCP[id.toString()]=getCriticalPoints(points2D);
-        
         return id;
+    },
+    addResidualShadow: function (id,array){
+        console.log(this.listResidualShadows[id.toString()]);
+        this.listResidualShadows[id.toString()].push(array);
+        console.log(this.listResidualShadows[id.toString()]);
     },
     popCurve: function(){
         var id=this.number-1;
@@ -324,12 +337,14 @@ ListCurvesShadow={
         delete this.listCP[ids];
         delete this.listObjects[ids];
         delete this.listPoints2D[ids];
+        delete this.listResidualShadows[ids];
         this.number--;
     },
     removeCurve: function (id){
         delete this.listCP[id.toString()];
         delete this.listObjects[id.toString()];
         delete this.listPoints2D[id.toString()];
+        delete this.listResidualShadows[id.toString()];
         this.number--;
     }
 }
@@ -337,12 +352,19 @@ ListCurves3D={
     number:0,
     list:{},
     addCurve: function(points3D,symmetric,id){
+        var t=0;
+        for(var key in this.list){
+            if(parseInt(key.substring(5,key.length))==id){
+                t++;
+                break;
+            }
+        }
+        if(t==0) this.number++;
         if(id!=undefined) var name="Curve"+id.toString();
         else var name="Curve"+this.number.toString();
         symmetric= symmetric || "";
         if(symmetric!="")  this.list[name]=new curve3D(name,points3D,"smooth",symmetric);
         else this.list[name]=new curve3D(name,points3D,"smooth","");
-        this.number++;
         return parseInt(name.substring(5,name.length));
     },
     popCurve: function(){
@@ -354,6 +376,14 @@ ListCurves3D={
     removeCurve: function (name){
         delete this.list[name];
         this.number--;
+    },
+    getAvailableIndex: function (){
+        var result="";
+        for(var key in this.list){
+            result=key;
+        }
+        if (result==="") return 0;
+        else return parseInt(result.substring(5,result.length))+1; 
     }
 }
 
@@ -386,6 +416,12 @@ ListObjects.prototype.search=function(name){
     }
     return false;
 }
+ListObjects.prototype.reset=function(){
+    this.list={};
+    this.type={};
+    this.name={};
+    this.n=0;
+}
 
 ListIntersectionObjects=new ListObjects();
 
@@ -398,6 +434,7 @@ function IntersectionObject(name,type){
 
 function curve3D(name,points3D,type,symmetric){
     this.name=name;
+    this.history=[];
     //this.controlpoints=points3D;
     this.catmullrom3={};
     this.tube={};
@@ -407,7 +444,7 @@ function curve3D(name,points3D,type,symmetric){
     this.compute(points3D);
 }
 curve3D.prototype.compute=function(points3D){
-    if(points3D.length>0){
+    if(points3D.length>1){
         this.iscurve=true;
         this.catmullrom3=new THREE.CatmullRomCurve3(points3D);  
         this.tube=new THREE.TubeGeometry(this.catmullrom3, 100, 0.1, 8, false);

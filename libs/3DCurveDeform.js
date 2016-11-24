@@ -12,7 +12,7 @@ function deformed3(array,handle,curveVertex,normal){
     this.pxy=[];
     this.weight=100;
     this.lowweight=1;
-    //this.lastarray=[];
+    this.copycurve=[];
     this.curveVertex=curveVertex;
     this.normal=normal;
     if(this.n>0) this.initialize();

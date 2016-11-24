@@ -78,6 +78,7 @@ function clear(){
             dispose3(obj);
         }
     }
+    ListIntersectionObjects.reset();
     DrawPlane.visible=false;
     planeToDraw.reset();
     ModeManage.focus(3);
