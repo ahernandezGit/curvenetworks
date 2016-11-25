@@ -363,7 +363,10 @@ ListCurves3D={
         if(id!=undefined) var name="Curve"+id.toString();
         else var name="Curve"+this.number.toString();
         symmetric= symmetric || "";
-        if(symmetric!="")  this.list[name]=new curve3D(name,points3D,"smooth",symmetric);
+        if(symmetric!==""){
+            this.list[name]=new curve3D(name,points3D,"smooth",symmetric);
+            this.list[symmetric].symmetric=name;
+        }
         else this.list[name]=new curve3D(name,points3D,"smooth","");
         return parseInt(name.substring(5,name.length));
     },
@@ -435,26 +438,44 @@ function IntersectionObject(name,type){
 function curve3D(name,points3D,type,symmetric){
     this.name=name;
     this.history=[];
-    //this.controlpoints=points3D;
+    this.controlpoints=points3D;
     this.catmullrom3={};
     this.tube={};
+    this.line={};
     this.type=type;
     this.iscurve=false;
     this.symmetric=symmetric;
     this.compute(points3D);
 }
 curve3D.prototype.compute=function(points3D){
-    if(points3D.length>1){
+    if(this.controlpoints.length>1){
         this.iscurve=true;
         this.catmullrom3=new THREE.CatmullRomCurve3(points3D);  
-        this.tube=new THREE.TubeGeometry(this.catmullrom3, 100, 0.1, 8, false);
-        this.controlpoints=this.tube.parameters.path.points;
-    }
-    else{
-        this.controlpoints=[];
+        this.tube=new THREE.Mesh(new THREE.TubeGeometry(this.catmullrom3, 100, 0.1, 8, false),materialTubeGeometry);
+        this.tube.name="Tube"+this.name;
+        
+        var geometryLine=new THREE.Geometry();
+        for(var i=0;i<this.controlpoints.length-1;i++){
+            var p=this.controlpoints[i];
+            var q=this.controlpoints[i+1];
+            geometryLine.vertices.push(p,q);
+        }
+        var material=new THREE.LineBasicMaterial({ color: 0x564002, linewidth: 3});
+        this.line = new THREE.LineSegments( geometryLine, material );
+        this.line.name=this.name;
     }
 }
-
+curve3D.prototype.updateCurve=function (){
+    if(this.iscurve){
+        var cp=LineSegmentToLineGeometry(this.line.geometry.vertices);
+        this.controlpoints=cp;
+        this.catmullrom3.points=cp;
+        this.catmullrom3.needsUpdate=true;
+        dispose3(this.tube);
+        this.tube=new THREE.Mesh(new THREE.TubeGeometry(this.catmullrom3, 100, 0.1, 8, false),materialTubeGeometry);
+        this.tube.name="Tube"+this.name;
+    }
+}
 //An plane to Draw over him
 
 function planetoDraw(planeObject){

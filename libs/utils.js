@@ -184,7 +184,6 @@ function getCircle(array){
 }
 //
 function mirrorOnPlaneYZ(curve){
-    
     var curveg=LineSegmentToLineGeometry(curve.vertices);
     var curvevertices=[];
     for(var j=0;j<curveg.length;j++){
@@ -192,27 +191,17 @@ function mirrorOnPlaneYZ(curve){
         p.setX(-p.x);
         curvevertices.push(p);
     }
-    var geometry=new THREE.Geometry();
-    for(var i=0;i<curvevertices.length-1;i++){
-        var p=curvevertices[i];
-        var q=curvevertices[i+1];
-         geometry.vertices.push(p,q);
-    }
-    return [geometry,curvevertices];
+    return curvevertices;
 }
-//array[0] is a geometry type linesegments
-//array[1] is an array of simple vertices 
+//Vertices is an array of  THREE.Vector3 
 //symmetric is the name of the symmetric curve
 // id is the id to insert the curve in ListCruves3D. If not provided the curve is inserted at final 
-function addCurve3D(array,origin,symmetric,idto){
+function addCurve3D(vertices,origin,symmetric,idto){
     symmetric= symmetric || ""; 
-    var geometry=array[0];
-    var vertices=array[1];
-    var material=new THREE.LineBasicMaterial({ color: 0x564002, linewidth: 3});
-    var line = new THREE.LineSegments( geometry, material );
+    var id;
     if(idto!==undefined){
-        var id=idto;
-        if(symmetric=="")ListCurves3D.addCurve(vertices,"",idto);
+        id=idto;
+        if(symmetric=="") ListCurves3D.addCurve(vertices,"",idto);
         else ListCurves3D.addCurve(vertices,symmetric,idto);
         if(origin!="reconstructed"){
             ListCurves2D.addCurve([],idto);
@@ -220,7 +209,7 @@ function addCurve3D(array,origin,symmetric,idto){
         }
     }
     else{
-        var id=ListCurves3D.number;
+        id=ListCurves3D.number;
         if(symmetric=="")ListCurves3D.addCurve(vertices);
         else ListCurves3D.addCurve(vertices,symmetric);    
         if(origin!="reconstructed"){
@@ -228,15 +217,10 @@ function addCurve3D(array,origin,symmetric,idto){
             ListCurvesShadow.addCurve([]);
         }
     }
-    line.name="Curve"+id.toString();
-    setup.scene.add(line);
+    setup.scene.add(ListCurves3D.list["Curve"+id.toString()].line);
     var tuberender=document.getElementById("checkRender");
     var shadowrender=document.getElementById("checkShadow");
-    if(tuberender.checked){
-        var mesh=new THREE.Mesh(ListCurves3D.list[line.name].tube,materialTubeGeometry);
-        mesh.name="Tube"+line.name;
-        setup.scene.add(mesh);
-    }
+    if(tuberender.checked)  setup.scene.add(ListCurves3D.list["Curve"+id.toString()].tube);
     if(shadowrender.checked){
         drawProjectingOnPlane(vertices,id);
     }
@@ -306,13 +290,11 @@ function symmetrize(){
     var n=ListIntersectionObjects.n;
     console.log(n);
     if(n==1){
-        console.log("entrou 1");
         var name=Object.keys(ListIntersectionObjects.list)[0];
         //var name=ListIntersectionObjects.name["0"];
         var copyname=name;
         if(name.startsWith("Tube")){
            var tubecurve=setup.scene.getObjectByName(name); 
-           
            tubecurve.material=materialTubeGeometry;    
            name=name.substring(4,name.length);
         } 
@@ -321,16 +303,25 @@ function symmetrize(){
         if(isXequalsign(curve.geometry.vertices)){
             var geo=mirrorOnPlaneYZ(curve.geometry);
             var id=ListCurves3D.getAvailableIndex();
-            addCurve3D(geo,"",name,id);
+            CommandManager.execute({
+              execute: function(){
+                  addCurve3D(geo,"",name,id);
+                  console.log("Add curve "+id.toString());
+              },
+              unexecute: function(){
+                  var curvename=ListCurves3D.list[name].symmetric; 
+                  var idto=curvename.substring(5,curvename.length);
+                  removeCurveFromScene(parseInt(idto));
+                  console.log("Remove symmetric curve "+idto);
+              }
+            });
             curve.material.linewidth=3;
             curve.material.opacity=1;    
             //ListIntersectionObjects.remove(name);
         } 
         else{
-            var array=mirrorOnPlaneYZ(curve.geometry);
-            var geomirror=array[0].clone();
             var geocopy=LineSegmentToLineGeometry(curve.geometry.vertices);
-            var mirrorvertices=array[1];
+            var mirrorvertices=mirrorOnPlaneYZ(curve.geometry);
             var m=geocopy.length;
             var min=0;
             var max=0;
@@ -390,13 +381,26 @@ function symmetrize(){
                     }
                 }
             }
-            var linegeometry=new THREE.Geometry();
-            for(var j=0;j<geometry.vertices.length-1;j++){
-                linegeometry.vertices.push(geometry.vertices[j],geometry.vertices[j+1]);
-            }
-            removeCurveFromScene(parseInt(name.substring(5,name.length)));
-            addCurve3D([linegeometry,geometry.vertices],"","",parseInt(name.substring(5,name.length)));
-            //ListIntersectionObjects.remove(name);
+            var idTo=parseInt(name.substring(5,name.length));
+            CommandManager.execute({
+                  execute: function(){
+                      removeCurveFromScene(idTo);
+                      addCurve3D(geometry.vertices,"","",idTo);
+                      ListCurves3D.list[name].history.push(geocopy);
+                      console.log("symmetrize curve"+idTo.toString());
+                  },
+                  unexecute: function(){
+                      var curve=setup.scene.getObjectByName(name); 
+                      var toLine=LineSegmentToLineGeometry(curve.geometry.vertices);
+                      var backup=ListCurves3D.list[name].history.pop();
+                      for(var i=0;i<toLine.length;i++){
+                          toLine[i].copy(backup[i]);
+                      }
+                      curve.geometry.verticesNeedUpdate=true;
+                      ListCurves3D.list[name].updateCurve();
+                      console.log("losing symmetry of curve "+idTo.toString());
+                  }
+            });
         }
         if(ListIntersectionObjects.search("ReferencePlane"))   ListIntersectionObjects.remove("ReferencePlane");
         if(!ReferencePlane.material.transparent){
@@ -597,4 +601,20 @@ for (i=0; i<P.length; i++) {
     j=i; 
 }
     return oddNodes; 
+}
+function cloneCurveVertices(curve){
+    var n=curve.geometry.vertices.length;
+    var result=[];
+    if(curve.type==="LineSegments"){
+        var temp=LineSegmentToLineGeometry(curve.geometry.vertices);   
+        for(var i=0;i<temp.length;i++){
+            result.push(temp[i].clone());
+        }
+    }
+    else{
+        for(var i=0;i<n;i++){
+            result.push(curve.geometry.vertices[i].clone());
+        }
+    }
+    return result;
 }

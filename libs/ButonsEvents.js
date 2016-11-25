@@ -60,16 +60,6 @@ function clear(){
     for(var i=0;i<n;i++) ListCurves2D.popCurve();
     n=ListCurvesShadow.number;
     for(var i=0;i<n;i++) ListCurvesShadow.popCurve();
-   /* var stroke=setup.scene.getObjectByName("CurrentCurve");
-    var sstroke=setup.scene.getObjectByName("shadowOfCurve");
-    if(stroke!=undefined){
-        setup.scene.remove(stroke);
-        dispose3(stroke);
-    }
-    if(sstroke!=undefined){    
-        setup.scene.remove(sstroke);    
-        dispose3(sstroke);    
-    }*/
     for (var i = setup.scene.children.length - 1; i >= 0 ; i -- ) {
         var obj = setup.scene.children[i];
         if ( obj.name !== "ReferencePlane" && obj.name !== "FloorPlane" && obj.type !== "HemisphereLight" 
@@ -89,9 +79,7 @@ function RenderTubes(){
     if(tuberender.checked){
         if(n>0){
             for(key in ListCurves3D.list){
-                var mesh=new THREE.Mesh(ListCurves3D.list[key].tube,materialTubeGeometry);
-                mesh.name="Tube"+ListCurves3D.list[key].name;
-                setup.scene.add(mesh);
+                setup.scene.add(ListCurves3D.list[key].tube);
             }   
         }
     }
@@ -99,7 +87,7 @@ function RenderTubes(){
         if(n>0){
             for(key in ListCurves3D.list){
                 var mesh=setup.scene.getObjectByName("Tube"+key);
-                if(mesh!=undefined){
+                if(mesh!==undefined){
                   setup.scene.remove(mesh);
                   dispose3(mesh);  
                 } 

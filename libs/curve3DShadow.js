@@ -139,11 +139,8 @@ function reconstructProjectOnNormalDirection(p,points){
         var v2d=p.clone().add(displacement);
         vertices.push(project2DToPlane(v2d,p3,new THREE.Vector3(0,1,0)));
     }
-    var geometry=new THREE.Geometry();
-    for(var i=0;i<vertices.length-1;i++){
-        geometry.vertices.push(vertices[i],vertices[i+1]);
-    }
-    return [geometry,vertices];
+   
+    return vertices;
 }
 //To fix a problem at execute UNDO method when we modificate shadow of a existing curve  
 function getListShadowObject(id,startCurve2DPoint){
@@ -335,8 +332,6 @@ function reconstruct3DCurve(id,ListCurve,ListShadow){
     } 
     //console.log(vx);
     var vxyz=[];
-    var material=new THREE.LineBasicMaterial({ color: 0x564002, linewidth: 3});
-    var geometry=new THREE.Geometry();
     for(var i=0;i<vx.length;i++){
         vxyz.push(new THREE.Vector3(vx[i],vy[i],vz[i]));
     }
@@ -376,11 +371,5 @@ function reconstruct3DCurve(id,ListCurve,ListShadow){
     for(var i=0;i<9;i++){
         laplacianSmooth(vxyz);    
     }
-    for(var i=0;i<vx.length-1;i++){
-        var p=vxyz[i];
-        var q=vxyz[i+1];
-        geometry.vertices.push(p,q);
-    }
-    
-    return [geometry,vxyz];
+    return vxyz;
 }
