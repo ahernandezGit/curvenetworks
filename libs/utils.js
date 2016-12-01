@@ -288,9 +288,13 @@ function removeCurve3DFromScene(id){
 }
 function symmetrize(){
     var n=ListIntersectionObjects.n;
-    console.log(n);
-    if(n==1){
-        var name=Object.keys(ListIntersectionObjects.list)[0];
+    if(n==2 && ListIntersectionObjects.search("ReferencePlane")){
+        for(var key in ListIntersectionObjects.list) {
+            if(key!=="ReferencePlane"){
+                 var name=key;
+                break;
+            }
+        }
         //var name=ListIntersectionObjects.name["0"];
         var copyname=name;
         if(name.startsWith("Tube")){
@@ -299,17 +303,28 @@ function symmetrize(){
            name=name.substring(4,name.length);
         } 
         ListIntersectionObjects.remove(copyname);
+        symmetrizeCurve(name);
+        if(ListIntersectionObjects.search("ReferencePlane"))   ListIntersectionObjects.remove("ReferencePlane");
+        if(!ReferencePlane.material.transparent){
+            ReferencePlane.material.transparent=true;
+            ReferencePlane.material.opacity=0.5;    
+        }
+    }
+}
+function symmetrizeCurve(name){
         var curve=setup.scene.getObjectByName(name); 
         if(isXequalsign(curve.geometry.vertices)){
             var geo=mirrorOnPlaneYZ(curve.geometry);
             var id=ListCurves3D.getAvailableIndex();
+            console.log(id);
             CommandManager.execute({
               execute: function(){
                   addCurve3D(geo,"",name,id);
                   console.log("Add curve "+id.toString());
               },
               unexecute: function(){
-                  var curvename=ListCurves3D.list[name].symmetric; 
+                  var curvename=ListCurves3D.list[name].symmetric;
+                  ListCurves3D.list[name].symmetric="";
                   var idto=curvename.substring(5,curvename.length);
                   removeCurveFromScene(parseInt(idto));
                   console.log("Remove symmetric curve "+idto);
@@ -398,19 +413,11 @@ function symmetrize(){
                       }
                       curve.geometry.verticesNeedUpdate=true;
                       ListCurves3D.list[name].updateCurve();
+                      updateTubeAndShadows(name);
                       console.log("losing symmetry of curve "+idTo.toString());
                   }
             });
         }
-        if(ListIntersectionObjects.search("ReferencePlane"))   ListIntersectionObjects.remove("ReferencePlane");
-        if(!ReferencePlane.material.transparent){
-            ReferencePlane.material.transparent=true;
-            ReferencePlane.material.opacity=0.5;    
-        }
-    }
-    if(n==2){
-        
-    }
 }
 function drawFarPlane(){
     function project(pos){
@@ -440,29 +447,11 @@ function drawFarPlane(){
         drawplane.visible=false;
     }
 }
-function getAvailableIndex3DCurves(){
-    var result="";
-    for(key in ListCurves3D.list){
-        result=key;
-    }
-    if (result==="") return 0;
-    else return parseInt(result.substring(5,result.length))+1;
-}
-
 /*var spritey = makeTextSprite( " prova1 ", { fontsize: 24, borderColor: {r:255, g:0, b:0, a:1.0}, backgroundColor: {r:255, g:100, b:100, a:0.8} } );
 spritey.position.set(0,0,0);
 setup.scene.add( spritey );
 */
 
-function getNormalDrawPlane(plane){
-    var v1 = new THREE.Vector3();
-    var v2 = new THREE.Vector3();
-    var a=plane.geometry.vertices[0].clone();
-    var b=plane.geometry.vertices[1].clone();
-    var c=plane.geometry.vertices[2].clone();
-    var normal = v1.subVectors( c, b ).cross( v2.subVectors( a, b ) ).normalize();
-    return normal;
-}
 function updateLabelRotate(angle){
     var spriteRot=setup.scene.getObjectByName("wa");
     if(spriteRot!="undefined"){
@@ -617,4 +606,45 @@ function cloneCurveVertices(curve){
         }
     }
     return result;
+}
+function curve2DInPolygon2D(points2D,P){
+    var n=points2D.length;
+    var resultIn=[];
+    var resultOut=[];
+    var valIn=[];
+    for(var i=0;i<n;i++){
+        if(isInPolygon2(P,points2D[i])){
+            resultIn.push(i);
+            valIn.push(points2D[i]);
+        }
+        else resultOut.push(i);
+    }
+    return {indIn:resultIn,indOut:resultOut,valueIn:valIn};
+}
+function getCorners2DPlane(plane){
+    var result=[];
+    for(var i=0;i<4;i++){
+        result.push(threeDToScreenSpace(plane.geometry.vertices[i]));
+    }
+    return result;
+}
+function updateTubeAndShadows(name){
+    var tuberender=document.getElementById("checkRender");
+    var shadowrender=document.getElementById("checkShadow");
+    if(tuberender.checked){
+        var meshtodelete=setup.scene.getObjectByName("Tube"+name);
+        if (meshtodelete!=undefined){
+            setup.scene.remove(meshtodelete);
+            dispose3(meshtodelete);
+        }
+        setup.scene.add(ListCurves3D.list[name].tube);
+    }
+     if(shadowrender.checked){
+        var meshshadow=setup.scene.getObjectByName("shadowOf"+name);
+        if(meshshadow!=undefined){
+          setup.scene.remove(meshshadow);
+          dispose3(meshshadow);  
+        }
+        drawProjectingOnPlane(ListCurves3D.list[name].controlpoints,parseInt(name.substring(5,name.length))); 
+    }
 }

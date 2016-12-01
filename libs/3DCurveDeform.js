@@ -214,3 +214,120 @@ deformed3.prototype.updateVertices3=function(){
 }
 
 
+function curveplusLaplacian(n,constrains,positions){
+    this.n=n;
+    this.positions=positions;
+    this.constrain=constrains;
+    this.reconstructed={};
+    this.freeVertex=[];
+    this.extraConstrain=[];
+    this.positionExtraConstrain=[];
+    this.weight=100;
+    this.lowweight=10;
+    this.computeLaplacian();
+}
+curveplusLaplacian.prototype.initialize=function (){
+    if(this.constrain.indexOf(0)==-1){
+        this.extraConstrain.push(0);
+    }
+    else if(this.constrain.indexOf(this.n-1)==-1){
+        this.extraConstrain.push(this.n-1);
+    }
+    
+}
+curveplusLaplacian.prototype.computeLaplacian=function(){
+   var n=this.n-2;
+   if(n>0){
+        //computing triplets of vertex for computing uniform laplacian 
+        var VertexTriplets=[];
+        for(var i=0;i<n;i++){
+            VertexTriplets.push([i,i+1,i+2]);
+        }
+        var L=zeros(3*n,3*n+6);
+        for(var i = 0; i < n; i++){
+            var v0 = VertexTriplets[i][0];
+            var v1 = VertexTriplets[i][1];
+            var v2 = VertexTriplets[i][2];
+            L.val[3*i*L.n + 3*v1]=1;
+            L.val[(3*i+1)*L.n + 3*v1+1]=1;
+            L.val[(3*i+2)*L.n + 3*v1+2]=1;
+            L.val[3*i*L.n + 3*v0]=-0.5;
+            L.val[(3*i+1)*L.n + 3*v0+1]=-0.5;
+            L.val[(3*i+2)*L.n + 3*v0+2]=-0.5;
+            L.val[3*i*L.n + 3*v2]=-0.5;
+            L.val[(3*i+1)*L.n + 3*v2+1]=-0.5;
+            L.val[(3*i+2)*L.n + 3*v2+2]=-0.5;
+        }
+        this.laplacian=sparse(L);
+        this.triplets=VertexTriplets;
+   }
+   else{
+       this.laplacian=[];
+       this.triplets=[];
+   }
+}
+curveplusLaplacian.prototype.reconstruc3D=function(){
+   
+    if(this.laplacian.length!=0) var ml=this.laplacian.m/3;    
+    else var ml=0;
+ 
+    var A=zeros(3*ml+ 3*this.freeVertex.length + 3*this.constrain.length+3*this.extraConstrain,3*this.n);
+    var b=zeros(3*ml+ 3*this.freeVertex.length + 3*this.constrain.length+3*this.extraConstrain);
+    //var A=zeros(2*ml+2*constrain.length ,2*this.n);
+    //var b=zeros(2*ml+2*constrain.length );
+    var ri = 0;
+    for(var i=0;i<this.laplacian.n;i++){
+        var s = this.laplacian.rows[i];
+        var e = this.laplacian.rows[i+1];
+        for ( var k=s; k < e; k++) {
+            A.val[ri + this.laplacian.cols[k] ] = this.laplacian.val[k];
+        }
+        ri += this.laplacian.n; 
+        if(i<this.laplacian.m){
+            b[i]=0;    
+        }    
+    }
+    for(var i=0;i<this.freeVertex.length;i++){
+        var v=this.freeVertex[i];
+        if(i<this.freeVertex.length/3 || i>2*this.freeVertex.length/3){
+            A.val[(2*ml + 2*i)*A.n + 2*v]=50;
+            A.val[(2*ml + 2*i+1)*A.n + 2*v+1]=50;
+            b[2*ml+ 2*i]=50*this.positions[v].x;
+            b[2*ml+ 2*i+1]=50*this.positions[v].y;    
+        }
+        else{
+            A.val[(2*ml + 2*i)*A.n + 2*v]=this.lowweight;
+            A.val[(2*ml + 2*i+1)*A.n + 2*v+1]=this.lowweight;
+            b[2*ml+ 2*i]=this.lowweight*this.positions[v].x;
+            b[2*ml+ 2*i+1]=this.lowweight*this.positions[v].y;
+        }
+        
+    }
+    for(var i=0;i<this.constrain.length;i++){
+        var v=this.constrain[i];
+        A.val[(3*ml+3*this.freeVertex.length +3*i)*A.n + 3*v]=this.weight;
+        A.val[(3*ml+3*this.freeVertex.length +3*i+1)*A.n + 3*v+1]=this.weight;
+        A.val[(3*ml+3*this.freeVertex.length +3*i+2)*A.n + 3*v+2]=this.weight;
+        b[3*ml + 3*this.freeVertex.length +3*i]=this.weight*this.positions[i].x;
+        b[3*ml + 3*this.freeVertex.length +3*i+1]=this.weight*this.positions[i].y;
+        b[3*ml + 3*this.freeVertex.length +3*i+2]=this.weight*this.positions[i].z;
+    }
+    for(var i=0;i<this.extraConstrain.length;i++){
+        var v=this.extraConstrain[i];
+        A.val[(3*ml+3*this.freeVertex.length +3*this.constrain+3*i)*A.n + 3*v]=this.lowweight;
+        A.val[(3*ml+3*this.freeVertex.length +3*this.constrain+3*i+1)*A.n + 3*v+1]=this.lowweight;
+        A.val[(3*ml+3*this.freeVertex.length +3*this.constrain+3*i+2)*A.n + 3*v+2]=this.lowweight;
+        b[3*ml + 3*this.freeVertex.length +3*this.constrain +3*i]=this.lowweight*this.positionExtraConstrain[0].x;
+        b[3*ml + 3*this.freeVertex.length +3*this.constrain+3*i+1]=this.lowweight*this.positionExtraConstrain[0].y;
+        b[3*ml + 3*this.freeVertex.length +3*this.constrain+3*i+2]=this.lowweight*this.positionExtraConstrain[0].z;
+    }
+    var spA=sparse(A);
+    var vxyz=spcgnr(spA,b);
+    //this.pxyz=vxyz;
+    var result=[];
+    for(i=0;i<this.n;i++){
+        result.push(new THREE.Vector3(vxyz[3*i],vxyz[3*i+1],0));
+        //result.push(new THREE.Vector3(vxyz[3*i],vxyz[3*i+1],vxyz[3*i+2]));
+    }
+    return result;
+}

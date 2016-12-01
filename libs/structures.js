@@ -61,7 +61,7 @@ ModeManage={
         material : new THREE.LineDashedMaterial( { color: 0xff0000, linewidth: 1, dashSize:0.5, gapSize:0.5} )  
     },
     selectObject : {
-        value: false,
+        value: true,
         raycaster:new THREE.Raycaster(),
         listObjects:[],
         addObject: function (obj){
@@ -226,7 +226,7 @@ ModeManage={
         this.drawGuidesLine.value=false;
         this.drawGuidesLine.geometry= new THREE.Geometry();
         
-        this.selectObject.value=false;
+        this.selectObject.value=true;
         this.selectObject.raycaster=new THREE.Raycaster();
         this.selectObject.listObjects=[];
         
@@ -265,6 +265,8 @@ ListCurves2D={
     listCP:{},
     listObjects:{},
     listPoints2D:{},
+    listResidual:{},
+    listRemoved:[],
     addCurve: function (points2D,idto){
         //var obj=new CatmullRomInterpolation(51,points2D,0.6);
         if(idto!=undefined) var id=idto.toString();
@@ -276,13 +278,18 @@ ListCurves2D={
                 break;
             }
         }
-        if(t==0) this.number++;
-        
+        if(t==0){
+            this.number++;
+            this.listResidual[id.toString()]=[];
+        }
         this.listObjects[id.toString()]={};
         this.listPoints2D[id.toString()]=points2D;
         this.listCP[id.toString()]=getCriticalPoints(points2D);
         
         return id;
+    },
+    addResidual: function (id,array){
+        this.listResidual[id.toString()].push(array);
     },
     popCurve: function(){
         var id=this.number-1;
@@ -305,6 +312,7 @@ ListCurvesShadow={
     listObjects:{},
     listPoints2D: {},
     listResidualShadows:{},
+    listRemoved:[],
     addCurve: function (points2D,idto){
         //var obj=new CatmullRomInterpolation(51,points2D,0.6);
         if(idto!=undefined) var id=idto.toString();
@@ -351,6 +359,7 @@ ListCurvesShadow={
 ListCurves3D={
     number:0,
     list:{},
+    listRemoved:[],
     addCurve: function(points3D,symmetric,id){
         var t=0;
         for(var key in this.list){
@@ -476,6 +485,17 @@ curve3D.prototype.updateCurve=function (){
         this.tube.name="Tube"+this.name;
     }
 }
+curve3D.prototype.copy=function (curve){
+    this.name=curve.name;
+    this.history=curve.history;
+    this.controlpoints=curve.controlpoints;
+    this.catmullrom3=curve.catmullrom3;
+    this.tube=curve.tube.clone(true);
+    this.line=curve.line.clone(true);
+    this.type=curve.type;
+    this.iscurve=curve.iscurve;
+    this.symmetric=curve.symmetric;
+}
 //An plane to Draw over him
 
 function planetoDraw(planeObject){
@@ -570,6 +590,8 @@ planetoDraw.prototype.rotateOnSprite=function(index,angle){
     switch(n){
         case 0: {
             var axis=this.object.geometry.vertices[1].clone().sub(this.object.geometry.vertices[0]);
+            axis.add(this.origin);
+            console.log(axis);
             axis.normalize();
             this.object.rotateOnAxis(axis,angle);
             this.updateObject();
@@ -579,6 +601,8 @@ planetoDraw.prototype.rotateOnSprite=function(index,angle){
         }    
         case 1: {
             var axis=this.object.geometry.vertices[2].clone().sub(this.object.geometry.vertices[0]);
+            axis.add(this.origin);
+            console.log(axis);
             axis.normalize();
             this.object.rotateOnAxis(axis,angle);
             this.updateObject();

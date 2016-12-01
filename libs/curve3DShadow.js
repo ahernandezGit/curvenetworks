@@ -282,7 +282,7 @@ function matchCriticalPoints(id,ListCurve,ListShadow){
     }
     
 }
-function reconstruct3DCurve(id,ListCurve,ListShadow){
+function reconstruct3DCurve2(id,ListCurve,ListShadow){
     //likely original method of the paper
     var m=101;
     var dirplane=new THREE.Vector3(0,0,1);
@@ -368,6 +368,52 @@ function reconstruct3DCurve(id,ListCurve,ListShadow){
     }
     */
      
+    for(var i=0;i<9;i++){
+        laplacianSmooth(vxyz);    
+    }
+    return vxyz;
+}
+function reconstruct3DCurve(id,ListCurve,ListShadow){
+    //likely original method of the paper
+    var m=101;
+    var dirplane=new THREE.Vector3(0,0,1);
+    var vx=zeros(m);
+    var vy=zeros(m);
+    var vz=zeros(m);
+    var p3=setup.camera.position.clone();
+    for(var j=0;j<m;j++){
+        var p=ListCurve.listObjects[id.toString()].interpolateForT(j/(m-1));
+        var q=ListShadow.listObjects[id.toString()].interpolateForT(j/(m-1));
+        //get line in world space passing by p  
+        var pv=new THREE.Vector2();
+        pv.x = ( p.x / window.innerWidth ) * 2 - 1;
+        pv.y = - ( p.y / window.innerHeight ) * 2 + 1;		
+        var vector = new THREE.Vector3();
+        vector.set( pv.x ,pv.y , 0.5 );
+       // console.log("vector antes ", vector);
+        vector.unproject( setup.camera);
+        vector.sub(setup.camera.position);
+        var dir = new THREE.Vector3();
+        dir.copy(vector);
+        var q3=Position3D({x:q.x,y:q.y});
+        
+        // two constrains: x and y coordinates are q3.x, q3.y
+        
+        var P=new THREE.Vector2(p3.x,p3.y);
+        var Q=new THREE.Vector2(q3.x,q3.y);
+        var D=new THREE.Vector2(dir.x,dir.y);
+        Q.sub(P);
+        var ts=Q.dot(D)/D.lengthSq();
+        var final=p3.clone().add(dir.multiplyScalar(ts));
+        vx[j]=final.x;
+        vy[j]=final.y;
+        vz[j]=final.z;
+    } 
+    var vxyz=[];
+    for(var i=0;i<vx.length;i++){
+        vxyz.push(new THREE.Vector3(vx[i],vy[i],vz[i]));
+    }
+   
     for(var i=0;i<9;i++){
         laplacianSmooth(vxyz);    
     }

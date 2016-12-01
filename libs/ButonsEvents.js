@@ -1,42 +1,15 @@
 function backFunction(){
-    var nc=ListCurves2D.number;
-    var ns=ListCurvesShadow.number;
-    console.log("back initial");
-    console.log("curves ", nc, " shadow ",ns);
-    if(ns>0 || nc>0){
-        if(nc>ns){
-        console.log("mais curve");
-        var stroke=setup.scene.getObjectByName("CurrentCurve");
-        var sstroke=setup.scene.getObjectByName("shadowOfCurve");
-        //console.log(stroke);
-        setup.scene.remove(stroke);
-        setup.scene.remove(sstroke);    
-        dispose3(stroke);
-        dispose3(sstroke);    
-        ListCurves2D.popCurve();
-        }
-        else if(ns>nc){
-            console.log("mais shadow");
-            var stroke=setup.scene.getObjectByName("CurrentCurveShadow");
-            if(stroke!=undefined) setup.scene.remove(stroke);
-            dispose3(stroke);
-            ListCurvesShadow.popCurve();
-            //ListCurves2D.listObjects[nc-1].draw("curve2d");
-        }
-        else{
-            var last=getAvailableIndex3DCurves();
-            removeCurveFromScene(last-1);
-        }
-        console.log("back after");
-        console.log("curves ", ListCurves2D.number, " shadow ",ListCurvesShadow.number);    
-    }
+    CommandManager.undo();
 }
 function deformFunction(){
      ModeManage.focus(4);
      setup.controls.enabled=false;
      ModeManage.deformCurve.pointgeometry.vertices=[new THREE.Vector3()];
-     var particlesC = new THREE.Points( ModeManage.deformCurve.pointgeometry, ModeManage.deformCurve.pointmaterial );
+     var particlesC=setup.scene.getObjectByName("intersectPoints"); 
+     if(particlesC!==undefined) setup.scene.remove(particlesC);
+     particlesC = new THREE.Points( ModeManage.deformCurve.pointgeometry, ModeManage.deformCurve.pointmaterial );
      particlesC.name="intersectPoints";
+     particlesC.visible=false;
      setup.scene.add( particlesC );
 }
 function joinCurveFunction(){
@@ -45,21 +18,13 @@ function joinCurveFunction(){
 }
 function clear(){
     ModeManage.clean();
-    
     var n=ListCurves3D.number;
-    for(var i=0;i<n;i++){
-        //var name="Curve"+i.toString();
-        //var reconstructed=setup.scene.getObjectByName(name);
-        //if(reconstructed!= undefined){ 
-            ListCurves3D.popCurve();
-            //setup.scene.remove(reconstructed);
-           // dispose3(reconstructed);
-       // }
-    }
+    for(var i=0;i<n;i++) ListCurves3D.popCurve();
     n=ListCurves2D.number;
     for(var i=0;i<n;i++) ListCurves2D.popCurve();
     n=ListCurvesShadow.number;
     for(var i=0;i<n;i++) ListCurvesShadow.popCurve();
+    
     for (var i = setup.scene.children.length - 1; i >= 0 ; i -- ) {
         var obj = setup.scene.children[i];
         if ( obj.name !== "ReferencePlane" && obj.name !== "FloorPlane" && obj.type !== "HemisphereLight" 
@@ -78,7 +43,7 @@ function RenderTubes(){
     var n=ListCurves3D.number;
     if(tuberender.checked){
         if(n>0){
-            for(key in ListCurves3D.list){
+            for(var key in ListCurves3D.list){
                 setup.scene.add(ListCurves3D.list[key].tube);
             }   
         }
@@ -101,7 +66,7 @@ function RenderShadows(){
     if(tuberender.checked){
         if(n>0){
             var t=0;
-            for(key in ListCurves3D.list){
+            for(var key in ListCurves3D.list){
                 drawProjectingOnPlane(ListCurves3D.list[key].controlpoints,t);
                 t++;
             }   
@@ -109,7 +74,7 @@ function RenderShadows(){
     }
     else{
         if(n>0){
-            for(key in ListCurves3D.list){
+            for(var key in ListCurves3D.list){
                 var meshshadow=setup.scene.getObjectByName("shadowOf"+key);
                 if(meshshadow!=undefined){
                   setup.scene.remove(meshshadow);
@@ -131,16 +96,40 @@ function ShowDrawPlane(){
     else DrawPlane.visible=false;
 }
 function deleteObject(){
-    if(ListIntersectionObjects.n>0){
-        for (var key in ListIntersectionObjects.list) {
-            var name=key;
-            console.log(name);
-            ListIntersectionObjects.remove(name);
-            if(name.startsWith("TubeCurve")) var id=name.substring(9,name.length);
-            else if(name.startsWith("Curve")) var id=name.substring(5,name.length);
-            removeCurveFromScene(parseInt(id));
-        }
-    }
+    var number=0; 
+    CommandManager.execute({
+          execute: function(){
+             if(ListIntersectionObjects.n>0){
+                for (var key in ListIntersectionObjects.list) {
+                    var name=key;
+                    ListIntersectionObjects.remove(name);
+                    if(name.startsWith("TubeCurve")) var id=name.substring(9,name.length);
+                    else if(name.startsWith("Curve")) var id=name.substring(5,name.length);
+                    ListCurves3D.listRemoved.push(ListCurves3D.list["Curve"+id]);
+                    ListCurves2D.listRemoved.push(ListCurves2D.listPoints2D[id]);
+                  ListCurvesShadow.listRemoved.push([ListCurvesShadow.listPoints2D[id],ListCurvesShadow.listResidualShadows[id]]);
+                    removeCurveFromScene(parseInt(id));
+                    console.log("Curve "+id+" deleted");
+                    number++;
+                }
+             }
+          },
+          unexecute: function(){
+            for(var i=0;i<number;i++){
+                 var curvedeleted3D=ListCurves3D.listRemoved.pop();
+                 var curvedeleted2D=ListCurves2D.listRemoved.pop();
+                 var curvedeletedShadow=ListCurvesShadow.listRemoved.pop();
+                 var name=curvedeleted3D.name;
+                 var id=name.substring(5,name.length);
+                 ListCurves2D.addCurve(curvedeleted2D,parseInt(id));
+                 ListCurvesShadow.addCurve(curvedeletedShadow[0]);
+                 ListCurvesShadow.listResidualShadows[id]=curvedeletedShadow[1];
+                 addCurve3D(curvedeleted3D.controlpoints,"reconstructed",curvedeleted3D.symmetric,id);
+                 ListCurves3D.list[name].history=curvedeleted3D.history;
+                 console.log("Back in scene deleted curve "+id);           
+            }
+          }
+    });
 }
 d3.select("#backButton").on("click",backFunction);
 d3.select("#deformButton").on("click",deformFunction);

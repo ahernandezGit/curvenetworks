@@ -17,10 +17,10 @@ function onMouseClick(){
                     ListIntersectionObjects.remove("ReferencePlane");
                 }
                 else{
+                    ListIntersectionObjects.add("ReferencePlane","Mesh"); 
                     intersected.object.material.transparent=false;
                     intersected.object.material.opacity=1;   
                     symmetrize();
-                    ListIntersectionObjects.add("ReferencePlane","Mesh"); 
                 }
             }
             else if(condition[1] || condition[2]){
@@ -88,13 +88,16 @@ function onMouseDown(){
         if(short.selected ){
             if(planeToDraw.spriteSelected!=-1){
                 console.log("selected mouse down");
-                var normal=planeToDraw.spritesRotation[parseInt(planeToDraw.spriteSelected)].position;
+                var normal=planeToDraw.spritesRotation[parseInt(planeToDraw.spriteSelected)].position.clone();
                 normal.sub(planeToDraw.origin);
                 normal.cross(planeToDraw.normal);
-                short.normalDrawPlane=normal;
-                var vbegin=project2DToPlane(short.pointsStroke2D[0],planeToDraw.origin,normal,false);
+                short.normalDrawPlane.copy(normal);
+                console.log("normal to drawplane: ", normal);
+                var vbegin=planeToDraw.spritesRotation[parseInt(planeToDraw.spriteSelected)].position.clone();
+                console.log("begin ",vbegin.clone().sub(planeToDraw.origin));
                 drawVector(planeToDraw.origin,vbegin,"vbegin");
-                short.LastPoint=projectToPlane(event,planeToDraw.origin,normal,false);
+                //short.LastPoint=projectToPlane(event,planeToDraw.origin,normal,false);
+                short.LastPoint=projectToFarPlane(event);
                 short.pointsStroke.push(short.LastPoint); 
             }
             else{
@@ -103,8 +106,8 @@ function onMouseDown(){
         }
         else{
             //console.log("dont selected");
-            short.normalDrawPlane=planeToDraw.getNormal();
-            short.LastPoint=projectToPlane(event,DrawPlane.geometry.vertices[0].clone(),short.normalDrawPlane,false);
+            //short.normalDrawPlane.copy(planeToDraw.getNormal());
+            short.LastPoint=projectToPlane(event,DrawPlane.geometry.vertices[0].clone(),planeToDraw.normal.clone(),false);
             short.pointsStroke.push(short.LastPoint);  
                 
         }
@@ -201,7 +204,8 @@ function onMouseMove() {
             }
         }
         else{
-            short.currentPoint=projectToPlane(event,planeToDraw.origin,short.normalDrawPlane,false);
+            //short.currentPoint=projectToPlane(event,planeToDraw.origin,planeToDraw.normal,false);
+            short.currentPoint=projectToFarPlane(event);
             short.pointsStroke.push(short.currentPoint);
             short.pointsStroke2D.push(mouseOnScreen2D(event));
             var geometryLine = new THREE.Geometry();
@@ -211,8 +215,8 @@ function onMouseMove() {
             short.LineStroke.add(line);      
             if(short.selected){
                 if(planeToDraw.spriteSelected!==-1){
-                    var vend=short.currentPoint.clone();
-                    var vbegin=project2DToPlane(short.pointsStroke2D[0],planeToDraw.origin,short.normalDrawPlane,false);
+                    var vend=projectToPlane(event,planeToDraw.origin,short.normalDrawPlane,false);
+                    var vbegin=planeToDraw.spritesRotation[parseInt(planeToDraw.spriteSelected)].position.clone();
                     vend.sub(planeToDraw.origin);
                     vbegin.sub(planeToDraw.origin);
                     var angle=vend.angleTo(vbegin);
@@ -222,7 +226,7 @@ function onMouseMove() {
                     vend.normalize().multiplyScalar(vbegin.length());
                     var vendVector=setup.scene.getObjectByName("vend");
                     if(vendVector!==undefined) setup.scene.remove(vendVector);
-                    drawVector(planeToDraw.origin,vend,"vend");  
+                    drawVector(planeToDraw.origin,planeToDraw.origin.clone().add(vend),"vend");  
                 }
                 else{
                     var n=short.pointsStroke2D.length;
@@ -285,7 +289,8 @@ function onMouseMove() {
                 var name=intersected.object.name.substring(4,intersected.object.name.length);
                 var meshshadow=setup.scene.getObjectByName("shadowOf"+name.toString());
                 var mesh=setup.scene.getObjectByName(name);
-                if(meshshadow!=undefined){
+                if(meshshadow!=undefined && !setup.controls.enabled){
+                  console.log(setup.controls.enabled);    
                   var shadowvertices=meshshadow.geometry.vertices;
                   for(var i=0;i<shadowvertices.length;i++){
                       pathLineGeometry.vertices.push(mesh.geometry.vertices[i],shadowvertices[i]);
@@ -326,14 +331,15 @@ function onMouseMove() {
             if(intersects.length>0){
                 var intersected=intersects[0];
                 //console.log(intersected);
-                if(intersected.object.type=="LineSegments"){
-                   short.intersected=true;
+                if(intersected.object.type=="LineSegments" && intersected.object.name.startsWith("Curve")){
+                   short.intersected=true;    
                    short.curvename=intersected.object.name;
                    short.vertices=intersected.object.geometry.vertices;    
                    if(!short.isdeforming){
                         short.pointgeometry.vertices[0].copy(intersected.object.geometry.vertices[intersected.index]);
                         var particlesC=setup.scene.getObjectByName("intersectPoints"); 
-                        if(particlesC!=undefined) particlesC.geometry.verticesNeedUpdate=true;
+                        if(particlesC!==undefined) particlesC.geometry.verticesNeedUpdate=true;
+                        particlesC.visible=true;
                         if(intersected.index%2==0) short.handle=intersected.index/2;
                         else short.handle=(intersected.index+1)/2;
                    } 
@@ -373,11 +379,12 @@ function onMouseUp() {
         if(short.selected){
             short.selected=false;
             if(planeToDraw.spriteSelected!=-1){
-              
                 var vend=project2DToPlane(short.pointsStroke2D[short.pointsStroke2D.length-1],planeToDraw.origin,short.normalDrawPlane,false);
-                var vbegin=project2DToPlane(short.pointsStroke2D[0],planeToDraw.origin,short.normalDrawPlane,false);
+                var vbegin=planeToDraw.spritesRotation[parseInt(planeToDraw.spriteSelected)].position.clone();
                 vend.sub(planeToDraw.origin);
                 vbegin.sub(planeToDraw.origin);
+                console.log("begin ",vbegin);
+                console.log("end ",vend);
                 var angle=vend.angleTo(vbegin);
                 //planeToDraw.reset();
                 var direction=short.pointsStroke2D[short.pointsStroke2D.length-1].clone().sub(short.pointsStroke2D[0]);
@@ -401,39 +408,32 @@ function onMouseUp() {
             }
         }
         else{
-           //converting points to parametricCurve
             var idto=ListCurves3D.getAvailableIndex();
             var idcurve=ListCurves2D.addCurve(short.pointsStroke2D,idto);
             console.log("index curve ", idcurve,idto);
-            var shadow2D=getShadow2DFrom3D(short.pointsStroke);
+            var ppoints3D=[];
+            for(var i=0;i<short.pointsStroke2D.length;i++){
+                ppoints3D.push(project2DToPlane(short.pointsStroke2D[i],planeToDraw.origin,planeToDraw.normal,false));
+            }
+            var curve3D=new THREE.CatmullRomCurve3(ppoints3D);
+            var points3D=[];
+            for(var j=0;j<101;j++) points3D.push(curve3D.getPoint(j/100));
+            var shadow2D=getShadow2DFrom3D(points3D);
             ListCurvesShadow.addCurve(shadow2D,idto);
             CommandManager.execute({
-              execute: function(){
-                 addCurve3D(short.pointsStroke,"reconstructed","",idto);
-                 console.log("Add curve "+idto.toString());
+              execute: function(){  
+                 addCurve3D(points3D,"reconstructed","",idto);
+                 console.log("Add curve "+idto.toString());  
+                 if(ReferencePlane.material.opacity==1){
+                    symmetrizeCurve("Curve"+idto.toString()); 
+                 }
+                 ModeManage.focus(3);
               },
               unexecute: function(){
                  removeCurveFromScene(idto);
                  console.log("Remove curve "+idto.toString());  
               }
             });
-           
-            //ListCurves2D.listObjects[idcurve].draw("curve2d");
-            //setup.scene.remove(short.LineStroke);
-            //dispose3(short.LineStroke);
-            //drawProjectingOnPlane(short.pointsStroke);
-            
-            //var cp=getCriticalPoints(short.pointsStroke2D);
-            //var cp=ListCurves2D.listCP[idcurve];
-            /*var arraycp=[];
-            for(var j=0;j<cp.length;j++){
-                arraycp.push(project2DVectorToFarPlane(short.pointsStroke2D[cp[j]]));
-            }
-            drawPoints(arraycp);
-            console.log(arraycp);*/
-            
-            
-            //console.log("mouseup");    
         }
         short.pointsStroke=[];
         setup.scene.remove( short.LineStroke );
@@ -445,7 +445,7 @@ function onMouseUp() {
         if(!short.isdrawing) return;
         short.isdrawing = false;
         var n=short.pointsStroke2D.length;
-        var ranking40=short.getRanking2D(short.pointsStroke2D[0]);
+        /*var ranking40=short.getRanking2D(short.pointsStroke2D[0]);
         var ranking41=short.getRanking2D(short.pointsStroke2D[n-1]);
         var weights0=ranking40[0];
         var weights1=ranking41[0];
@@ -470,7 +470,14 @@ function onMouseUp() {
         var s3=averageShadowsIndexes(indexes,s1,s2);
         //var s3=averageShadows(s1,s2);
         var s1shadow=worldTo2D(s3);
-        var idto=getAvailableIndex3DCurves();
+        */
+        var corners2D=getCorners2DPlane(InitialPlane);
+        var indexes=curve2DInPolygon2D(short.pointsStroke2D,corners2D);
+        var s1=shadow2DarrayToPlane(indexes.valueIn,new THREE.Vector3(0,0,-2.5),new THREE.Vector3(0,0,1));
+        var curveShadow=new curveplusLaplacian(n,indexes.indIn,s1);
+        var s3=curveShadow.reconstruc3D();
+        var s1shadow=worldTo2D(s3);
+        var idto=ListCurves3D.getAvailableIndex();
         var idcurve=ListCurves2D.addCurve(short.pointsStroke2D,idto);
         var idcurvec=ListCurvesShadow.addCurve(s1shadow,idto);
         console.log(idcurve,idcurvec);
@@ -496,7 +503,8 @@ function onMouseUp() {
         }
         else{
             ListCurvesShadow.removeCurve(idcurve);
-        }        
+        }
+        
         short.pointsStroke=[];
         //setup.scene.remove( short.LineStroke );
         dispose3(short.LineStroke);
@@ -509,12 +517,20 @@ function onMouseUp() {
         short.isdrawing = false;
         if(short.id!=-1){
             var Shadow2D=ListCurvesShadow.listPoints2D[short.id.toString()];
+            var Curve2D=ListCurves2D.listPoints2D[short.id.toString()];
             var idcurve=ListCurvesShadow.addCurve(short.pointsStroke2D,short.id);
+            var to2D=worldTo2D(ListCurves3D.list["Curve"+short.id.toString()].controlpoints);
+            var idcurvec=ListCurves2D.addCurve(to2D,short.id);
             short.pointsStroke=[];
             var match=matchCriticalPoints(idcurve,ListCurves2D,ListCurvesShadow);
             if(match){
                 //console.log(ListCurvesShadow.listResidualShadows[idcurve.toString()]);
-                ListCurvesShadow.addResidualShadow(short.id,Shadow2D);
+                //ListCurvesShadow.addResidualShadow(short.id,Shadow2D);
+                //ListCurves2D.addResidual(short.id,Curve2D);
+                var name="Curve"+idcurve.toString();
+                var tohistory=ListCurves3D.list[name].history;
+                tohistory.push(cloneCurveVertices(ListCurves3D.list[name].line));
+     
                 //console.log(ListCurvesShadow.listResidualShadows[idcurve.toString()]);
                 if(short.pointsStroke2D.length<3){
                     var geopxyz=reconstructProjectOnNormalDirection(short.pointsStroke2D[0],ListCurves2D.listPoints2D[idcurve]);
@@ -533,22 +549,21 @@ function onMouseUp() {
                 CommandManager.execute({
                   execute: function(){
                      addCurve3D(geopxyz,"reconstructed",symmetric,idcurve);
+                     ListCurves3D.list[name].history=tohistory; 
                      console.log("Modificate shadow curve "+idcurve.toString());
                   },
                   unexecute: function(){
-                     var residual=ListCurvesShadow.listResidualShadows[idcurve.toString()].pop();
-                     var idnew=ListCurvesShadow.addCurve(residual,idcurve);
-                     // To get Shadow CatmullRom that just it generate with mathCriticalPoint()
-                     getListShadowObject(idcurve,ListCurves2D.listPoints2D[0]);
-                     if(residual.length<3){
-                        var geopxyz=reconstructProjectOnNormalDirection(residual[0],ListCurves2D.listPoints2D[idcurve]);
+                      var name="Curve"+idcurve.toString();
+                      var curve=setup.scene.getObjectByName(name);
+                      var toLine=LineSegmentToLineGeometry(curve.geometry.vertices);
+                      var backup=ListCurves3D.list[name].history.pop();
+                      console.log(backup.length,toLine.length);
+                      for(var j=0;j<toLine.length;j++){
+                          toLine[j].copy(backup[j]);
                       }
-                     else{ 
-                         var geopxyz=reconstruct3DCurve(idcurve,ListCurves2D,ListCurvesShadow);  
-                         removeCurve3DFromScene(idcurve);
-                         addCurve3D(geopxyz,"reconstructed",symmetric,idcurve);
-                         console.log("Back shadow curve "+idcurve.toString());  
-                     }
+                      curve.geometry.verticesNeedUpdate=true;
+                      ListCurves3D.list[name].updateCurve();
+                      updateTubeAndShadows(name);
                     }
                   });
                 short.id=-1;
@@ -585,6 +600,7 @@ function onMouseUp() {
              console.log("Deforming done");  
              ListCurves3D.list[short.curvename].updateCurve();  
              ListCurves3D.list[short.curvename].history.push(short.copyVertices);  
+             updateTubeAndShadows(short.curvename);
           },
           unexecute: function(){
               var editedcurve=setup.scene.getObjectByName(short.curvename); 
@@ -596,7 +612,7 @@ function onMouseUp() {
               }
               editedcurve.geometry.verticesNeedUpdate=true;
               ListCurves3D.list[short.curvename].updateCurve();
-              //setup.scene.add(ListCurves3D.list[short.curvename].tube);
+              updateTubeAndShadows(short.curvename);
           }
         });
         short.copyVertices=[];
@@ -673,27 +689,11 @@ function onMouseUp() {
                     listoject[i].updateVertices3();
                     curve.geometry.verticesNeedUpdate=true;
                     ListCurves3D.list[name].updateCurve();
-                    var tuberender=document.getElementById("checkRender");
-                    var shadowrender=document.getElementById("checkShadow");
-                    if(tuberender.checked){
-                        var meshtodelete=setup.scene.getObjectByName("Tube"+name);
-                        if (meshtodelete!=undefined){
-                            setup.scene.remove(meshtodelete);
-                            dispose3(meshtodelete);
-                        }
-                        setup.scene.add(ListCurves3D.list[name].tube);
-                    }
-                     if(shadowrender.checked){
-                        var meshshadow=setup.scene.getObjectByName("shadowOfCurve"+listid[i].toString());
-                        if(meshshadow!=undefined){
-                          setup.scene.remove(meshshadow);
-                          dispose3(meshshadow);  
-                        }
-                        drawProjectingOnPlane(ListCurves3D.list[name].controlpoints,listid[i]); 
-                    }
+                    updateTubeAndShadows(name);
                 }
               },
               unexecute: function(){
+                  console.log("Break upe many curves");  
                   for(var i=0;i<listid.length;i++){
                       var name="Curve"+listid[i].toString();
                       var curve=setup.scene.getObjectByName(name); 
@@ -704,24 +704,7 @@ function onMouseUp() {
                       }
                       curve.geometry.verticesNeedUpdate=true;
                       ListCurves3D.list[name].updateCurve();
-                      var tuberender=document.getElementById("checkRender");
-                      var shadowrender=document.getElementById("checkShadow");
-                      if(tuberender.checked){
-                        var meshtodelete=setup.scene.getObjectByName("Tube"+name);
-                        if (meshtodelete!=undefined){
-                            setup.scene.remove(meshtodelete);
-                            dispose3(meshtodelete);
-                        }
-                        setup.scene.add(ListCurves3D.list[name].tube);
-                      }
-                      if(shadowrender.checked){
-                        var meshshadow=setup.scene.getObjectByName("shadowOfCurve"+listid[i].toString());
-                        if(meshshadow!=undefined){
-                          setup.scene.remove(meshshadow);
-                          dispose3(meshshadow);  
-                        }
-                        drawProjectingOnPlane(ListCurves3D.list[name].controlpoints,listid[i]); 
-                      }
+                      updateTubeAndShadows(name);
                   }
               }
             });
@@ -773,7 +756,6 @@ function onKeyDown(){
             }
         }
     }
-    
     //ctrl+z
     //letter z is 90
     if(event.keyCode == 90 && event.ctrlKey){
